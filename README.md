@@ -10,7 +10,7 @@
 ## Installation
 
 ```r
-remotes::install_github("ForgeGit/wclR")
+remotes::install_github("jruizcabrejos/wclR")
 ```
 
 ## Authentication
