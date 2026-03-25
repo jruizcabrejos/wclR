@@ -1,0 +1,63 @@
+---
+title: "Personal Report Workflow"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Personal Report Workflow}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+This vignette focuses on the report-first personal workflow: start from a
+single report, identify your character inside that report, and then pull the
+events you care about.
+
+```{r setup, eval = FALSE}
+library(wclR)
+
+client <- wcl_client()
+report_code <- wcl_report_code("ZXaDV9FcAtyWnJPg")
+fights <- wcl_fights(report_code, client = client)
+actors <- wcl_actors(report_code, type = "player", client = client)
+```
+
+## Find a character inside the report
+
+```{r actor-filter, eval = FALSE}
+my_actor <- dplyr::filter(actors, name == "Vivax")
+fight_id <- fights$fightID[[1]]
+```
+
+## Pull personal events
+
+```{r personal-events, eval = FALSE}
+casts <- wcl_events(
+  report_code,
+  fight_id = fight_id,
+  data_type = "Casts",
+  source_id = my_actor$actorID[[1]],
+  client = client
+)
+
+buffs <- wcl_events(
+  report_code,
+  fight_id = fight_id,
+  data_type = "Buffs",
+  source_id = my_actor$actorID[[1]],
+  client = client
+)
+
+casts <- wcl_join_actors(casts, actors)
+casts <- wcl_add_relative_time(casts)
+```
+
+## Notes
+
+- v1 keeps personal workflows report-first on purpose.
+- `wcl_filter_abilities()`, `wcl_filter_types()`, and `wcl_filter_and()` are
+  the package-native way to build common filter expressions.
+- Character and guild discovery across reports can still be reached through
+  `wcl_query_custom()` plus `wcl_request()` when needed.

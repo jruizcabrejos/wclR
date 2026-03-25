@@ -1,0 +1,50 @@
+---
+title: "Population Workflow"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Population Workflow}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+This vignette shows a public-log crawl workflow for users looking at encounter
+populations, rankings, and broad fight samples across many reports.
+
+```{r setup, eval = FALSE}
+library(wclR)
+
+client <- wcl_client()
+```
+
+## Crawl public reports for a zone
+
+```{r reports, eval = FALSE}
+zone_fights <- wcl_zone_fights(
+  zone_id = 1020,
+  pages = 1:5,
+  client = client
+)
+```
+
+## Pull rankings
+
+```{r rankings, eval = FALSE}
+rankings <- wcl_rankings_set(
+  zone_id = 1018,
+  metrics = c("speed", "progress", "execution"),
+  page = 1:3,
+  client = client
+)
+```
+
+## Notes
+
+- `wcl_zone_fights()` wraps `wcl_reports()`, `wcl_fights()`, and optional
+  `wcl_distinct_fights()` for population crawls.
+- `wcl_rankings_set()` returns one row per ranking entry across multiple
+  metrics and pages.
+- `wcl_rankings()` remains available when you only need one metric.

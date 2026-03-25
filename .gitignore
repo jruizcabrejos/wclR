@@ -1,0 +1,8 @@
+.Rhistory
+.RData
+.Rproj.user/
+*.Rproj.user/
+*.Rcheck/
+..Rcheck/
+temp-lib/
+*.tar.gz

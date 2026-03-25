@@ -1,0 +1,33 @@
+if (getRversion() >= "2.15.1") {
+  utils::globalVariables(c(
+    "actorID",
+    "actor_id",
+    "code",
+    "duration",
+    "duration_s",
+    "encounterID",
+    "encounterName",
+    "endTime",
+    "event_at",
+    "fightID",
+    "fight_end_at",
+    "fight_start_at",
+    "gameID",
+    "id",
+    "logID",
+    "name",
+    "player_class",
+    "player_spec",
+    "region_name",
+    "report_end_at",
+    "report_link",
+    "report_start_at",
+    "report_title",
+    "role",
+    "sourceID",
+    "startTime",
+    "subType",
+    "targetID",
+    "timestamp"
+  ))
+}

@@ -1,0 +1,74 @@
+---
+title: "Raid Report Workflow"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Raid Report Workflow}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+This vignette shows the main report-first workflow for raid teams that want to
+inspect a specific log, drill into its fights, and then fetch the events and
+player context needed for mechanics analysis.
+
+```{r setup, eval = FALSE}
+library(wclR)
+
+client <- wcl_client()
+report_code <- wcl_report_code("https://classic.warcraftlogs.com/reports/ZXaDV9FcAtyWnJPg")
+```
+
+## Discover the report structure
+
+```{r fights, eval = FALSE}
+fights <- wcl_fights(report_code, client = client)
+actors <- wcl_actors(report_code, client = client)
+```
+
+## Pull role and roster information for one fight
+
+```{r players, eval = FALSE}
+fight_id <- fights$fightID[[1]]
+
+players <- wcl_player_details(
+  report_code,
+  fight_id = fight_id,
+  client = client
+)
+```
+
+## Pull filtered events for mechanics analysis
+
+```{r events, eval = FALSE}
+damage_taken <- wcl_events(
+  report_code,
+  fight_id = fight_id,
+  data_type = "DamageTaken",
+  hostility_type = "Friendlies",
+  filter_expression = wcl_filter_and(
+    wcl_filter_abilities(70911),
+    wcl_filter_types("damage")
+  ),
+  client = client
+)
+```
+
+## Enrich events with roster and actor context
+
+```{r joins, eval = FALSE}
+damage_taken <- wcl_join_actors(damage_taken, actors)
+damage_taken <- wcl_join_players(damage_taken, players)
+damage_taken <- wcl_add_relative_time(damage_taken)
+```
+
+## Notes
+
+- `wcl_events()` paginates automatically with `nextPageTimestamp`.
+- `wcl_player_details()` returns a single tidy table with a `role` column.
+- `wcl_join_actors()` and `wcl_join_players()` let raid-review workflows stay
+  retrieval-first without reimplementing joins in each notebook.
+- `wcl_report_code()` accepts either a bare code or a full report URL.

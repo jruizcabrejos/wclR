@@ -1,0 +1,13 @@
+^.*\.Rproj$
+^\.Rproj\.user$
+^LICENSE\.md$
+^README\.md$
+^test\.R$
+^test\.drawio$
+^\.Rhistory$
+^\.RData$
+^\.git$
+^temp-lib($|/)
+^\.{2}Rcheck($|/)
+^.*\.Rcheck($|/)
+^.*\.tar\.gz$

@@ -1,0 +1,29 @@
+Package: wclR
+Type: Package
+Title: Warcraft Logs Data Retrieval Helpers for R
+Version: 0.1.0
+Author: Vivax - Forge
+Maintainer: The package maintainer <canalhorchatero@gmail.com>
+Description: Layered helpers for retrieving and normalizing public
+    Warcraft Logs API data in R. The package provides a cached API client,
+    typed wrappers for reports, fights, actors, player details, events,
+    and rankings, joined workflow helpers for zone crawls and roster/event
+    enrichment, plus compatibility helpers for older query-string based
+    workflows.
+License: MIT + file LICENSE
+Encoding: UTF-8
+RoxygenNote: 7.2.3
+Roxygen: list(markdown = TRUE)
+Suggests: 
+    knitr,
+    rmarkdown,
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
+Imports:
+    dplyr,
+    httr,
+    jsonlite,
+    purrr,
+    stringr,
+    tibble
+VignetteBuilder: knitr
