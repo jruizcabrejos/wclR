@@ -39,6 +39,7 @@ casts <- wcl_events(
   fight_id = fight_id,
   data_type = "Casts",
   source_id = my_actor$actorID[[1]],
+  include_resources = FALSE,
   client = client
 )
 
@@ -47,6 +48,7 @@ buffs <- wcl_events(
   fight_id = fight_id,
   data_type = "Buffs",
   source_id = my_actor$actorID[[1]],
+  include_resources = FALSE,
   client = client
 )
 
@@ -59,5 +61,10 @@ casts <- wcl_add_relative_time(casts)
 - v1 keeps personal workflows report-first on purpose.
 - `wcl_filter_abilities()`, `wcl_filter_types()`, and `wcl_filter_and()` are
   the package-native way to build common filter expressions.
+- `include_resources`, `use_ability_ids`, and `use_actor_ids` control coarse
+  event payload details. Arbitrary nested event JSON columns cannot be excluded
+  server-side by column name.
 - Character and guild discovery across reports can still be reached through
   `wcl_query_custom()` plus `wcl_request()` when needed.
+- Use the [official Warcraft Logs v2 Warcraft schema](https://www.warcraftlogs.com/v2-api-docs/warcraft/)
+  when building those custom queries.

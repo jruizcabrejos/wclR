@@ -3,7 +3,7 @@
 \alias{wcl_rankings_set}
 \title{Batch workflow helpers}
 \usage{
-wcl_zone_fights(zone_id, pages = NULL, distinct = TRUE, client = NULL)
+wcl_zone_fights(zone_id, pages = 1:3, distinct = TRUE, client = NULL)
 
 wcl_rankings_set(
   zone_id,
@@ -17,7 +17,9 @@ wcl_rankings_set(
 \arguments{
 \item{zone_id}{Warcraft Logs zone ID.}
 
-\item{pages}{Optional page number or vector of page numbers.}
+\item{pages}{For \code{wcl_zone_fights()}, an exact page number or vector,
+defaulting to pages 1 through 3; use \code{NULL} for automatic discovery
+through page 25. For \code{wcl_rankings_set()}, ranking page numbers.}
 
 \item{distinct}{Whether to apply \code{wcl_distinct_fights()} to the combined
 fight table.}

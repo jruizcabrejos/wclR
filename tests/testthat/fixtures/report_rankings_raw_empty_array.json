@@ -1,0 +1,16 @@
+{
+  "data": {
+    "reportData": {
+      "report": {
+        "code": "RANKRAWARRAY",
+        "title": "Raw Empty Array",
+        "startTime": 1700000000000,
+        "endTime": 1700003600000,
+        "segments": 1,
+        "exportedSegments": 1,
+        "fights": [],
+        "rankings": []
+      }
+    }
+  }
+}

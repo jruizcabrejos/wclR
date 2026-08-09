@@ -49,6 +49,9 @@ damage_taken <- wcl_events(
   fight_id = fight_id,
   data_type = "DamageTaken",
   hostility_type = "Friendlies",
+  include_resources = FALSE,
+  use_ability_ids = TRUE,
+  use_actor_ids = TRUE,
   filter_expression = wcl_filter_and(
     wcl_filter_abilities(70911),
     wcl_filter_types("damage")
@@ -56,6 +59,49 @@ damage_taken <- wcl_events(
   client = client
 )
 ```
+
+The three bandwidth controls default to `TRUE`. Set `include_resources`,
+`use_ability_ids`, or `use_actor_ids` to `FALSE` when that detailed payload is
+not needed. Event `data` is a JSON scalar in the API, so arbitrary nested
+columns such as `classResources` cannot be excluded from the server response by
+column name; they can only be dropped from the tibble after download. Disabling
+an ID flag can also change which corresponding detail or ID columns are present.
+
+## Pull rankings for the report or selected fights
+
+```{r report-rankings, eval = FALSE}
+all_rankings <- wcl_report_rankings(
+  report_code,
+  player_metric = "dps",
+  client = client
+)
+
+fight_rankings <- wcl_report_rankings(
+  report_code,
+  fight_ids = fight_id,
+  player_metric = "dps",
+  client = client
+)
+
+raw_fight_rankings <- wcl_report_rankings(
+  report_code,
+  fight_ids = fight_id,
+  output = "raw",
+  client = client
+)
+```
+
+With `fight_ids = NULL`, the default, Warcraft Logs returns rankings for the
+whole report as individual fight rankings, not as one aggregate report rank.
+The default `output = "tidy"` produces one row per ranked character and fight;
+`output = "raw"` preserves the exact parsed rankings JSON. This report-level
+helper is distinct from `wcl_rankings()`, which retrieves zone encounter
+leaderboards.
+
+Tidy output includes `segments`, `exportedSegments`, and `rankings_complete`.
+The helper warns if Warcraft Logs has not yet processed every uploaded segment
+for rankings. See the [rankings and parses guide](https://www.warcraftlogs.com/help/ranks/)
+for the comparison and timeframe terminology.
 
 ## Enrich events with roster and actor context
 
@@ -72,3 +118,5 @@ damage_taken <- wcl_add_relative_time(damage_taken)
 - `wcl_join_actors()` and `wcl_join_players()` let raid-review workflows stay
   retrieval-first without reimplementing joins in each notebook.
 - `wcl_report_code()` accepts either a bare code or a full report URL.
+- The [official Warcraft Logs v2 Warcraft schema](https://www.warcraftlogs.com/v2-api-docs/warcraft/)
+  documents the fields, arguments, and enums available for custom queries.

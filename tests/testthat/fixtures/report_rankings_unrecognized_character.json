@@ -1,0 +1,43 @@
+{
+  "data": {
+    "reportData": {
+      "report": {
+        "code": "RANKCHARODD",
+        "title": "Unknown Character Shape",
+        "startTime": 1700000000000,
+        "endTime": 1700003600000,
+        "segments": 1,
+        "exportedSegments": 1,
+        "fights": [
+          {
+            "id": 11,
+            "name": "Unknown Character Boss",
+            "encounterID": 1001,
+            "difficulty": 4,
+            "size": 25,
+            "kill": true,
+            "startTime": 1000,
+            "endTime": 121000
+          }
+        ],
+        "rankings": {
+          "data": [
+            {
+              "fightID": 11,
+              "roles": {
+                "dps": {
+                  "characters": [
+                    {
+                      "name": null,
+                      "amount": 1000
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

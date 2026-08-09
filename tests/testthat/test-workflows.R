@@ -91,7 +91,7 @@ test_that("wcl_zone_fights combines report and fight metadata", {
   deduplicated <- wclR::wcl_zone_fights(1020, client = mock_client())
   all_rows <- wclR::wcl_zone_fights(1020, client = mock_client(), distinct = FALSE)
 
-  expect_null(seen_pages)
+  expect_equal(seen_pages, 1:3)
   expect_equal(nrow(deduplicated), 2L)
   expect_equal(nrow(all_rows), 3L)
   expect_true(all(c("zone_id", "report_page", "report_visibility", "report_region") %in% names(deduplicated)))

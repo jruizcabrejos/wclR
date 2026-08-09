@@ -1,7 +1,8 @@
 #' Expand zone report pages into fight rows
 #'
 #' @param zone_id Warcraft Logs zone ID.
-#' @param pages Optional page number or vector of page numbers.
+#' @param pages Page number or vector of exact page numbers. Defaults to pages
+#'   1 through 3. Use `NULL` for automatic discovery through page 25.
 #' @param distinct Whether to apply [wcl_distinct_fights()] to the combined
 #'   fight table. Defaults to `TRUE`.
 #' @param client Optional [wcl_client()] object.
@@ -9,7 +10,7 @@
 #' @return A tibble with one row per fight plus report-page metadata from
 #'   [wcl_reports()].
 #' @export
-wcl_zone_fights <- function(zone_id, pages = NULL, distinct = TRUE, client = NULL) {
+wcl_zone_fights <- function(zone_id, pages = 1:3, distinct = TRUE, client = NULL) {
   client <- .wcl_resolve_client(client)
   reports <- wcl_reports(zone_id = zone_id, pages = pages, client = client)
 

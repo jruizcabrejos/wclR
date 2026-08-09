@@ -1,0 +1,43 @@
+{
+  "data": {
+    "reportData": {
+      "report": {
+        "code": "RANKGUID",
+        "title": "GUID Identity",
+        "startTime": 1700000000000,
+        "endTime": 1700003600000,
+        "segments": 1,
+        "exportedSegments": 1,
+        "fights": [
+          {
+            "id": 10,
+            "name": "GUID Boss",
+            "encounterID": 1000,
+            "difficulty": 4,
+            "size": 25,
+            "kill": true,
+            "startTime": 1000,
+            "endTime": 121000
+          }
+        ],
+        "rankings": {
+          "data": [
+            {
+              "fightID": 10,
+              "roles": {
+                "dps": {
+                  "characters": [
+                    {
+                      "guid": "Player-ABC",
+                      "amount": 1000
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

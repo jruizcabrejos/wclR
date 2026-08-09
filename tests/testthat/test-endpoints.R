@@ -15,7 +15,7 @@ test_that("wcl_reports auto-paginates and normalizes report rows", {
     .package = "wclR"
   )
 
-  reports <- wclR::wcl_reports(1020, client = mock_client())
+  reports <- wclR::wcl_reports(1020, pages = NULL, client = mock_client())
 
   expect_equal(nrow(reports), 2L)
   expect_equal(reports$logID, c("ABC123", "DEF456"))

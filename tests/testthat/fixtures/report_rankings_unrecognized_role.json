@@ -1,0 +1,44 @@
+{
+  "data": {
+    "reportData": {
+      "report": {
+        "code": "RANKROLEODD",
+        "title": "Unknown Role Shape",
+        "startTime": 1700000000000,
+        "endTime": 1700003600000,
+        "segments": 1,
+        "exportedSegments": 1,
+        "fights": [
+          {
+            "id": 9,
+            "name": "Unknown Boss",
+            "encounterID": 999,
+            "difficulty": 4,
+            "size": 25,
+            "kill": true,
+            "startTime": 1000,
+            "endTime": 121000
+          }
+        ],
+        "rankings": {
+          "data": [
+            {
+              "fightID": 9,
+              "roles": {
+                "dps": {
+                  "name": "Damage",
+                  "entries": [
+                    {
+                      "id": 901,
+                      "name": "Actual Character"
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

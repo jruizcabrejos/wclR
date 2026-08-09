@@ -23,20 +23,37 @@ client <- wcl_client()
 ## Crawl public reports for a zone
 
 ```{r reports, eval = FALSE}
+first_three_pages <- wcl_reports(
+  zone_id = 1020,
+  client = client
+)
+
+first_page <- wcl_reports(
+  zone_id = 1020,
+  pages = 1,
+  client = client
+)
+
 zone_fights <- wcl_zone_fights(
   zone_id = 1020,
-  pages = 1:5,
+  pages = 1:3,
   client = client
 )
 ```
 
-## Pull rankings
+`wcl_reports()` retrieves pages `1:3` by default; pass `pages = 1` to request
+only the first page. Each completed page reports its page count and running
+total in the form `Report page <page>: <page count> reports (<running total>
+total).` Requested page numbers above 25 warn before retrieval and are capped
+to page 25.
+
+## Pull zone rankings
 
 ```{r rankings, eval = FALSE}
-rankings <- wcl_rankings_set(
+zone_rankings <- wcl_rankings_set(
   zone_id = 1018,
   metrics = c("speed", "progress", "execution"),
-  page = 1:3,
+  pages = 1:3,
   client = client
 )
 ```
@@ -47,4 +64,7 @@ rankings <- wcl_rankings_set(
   `wcl_distinct_fights()` for population crawls.
 - `wcl_rankings_set()` returns one row per ranking entry across multiple
   metrics and pages.
-- `wcl_rankings()` remains available when you only need one metric.
+- `wcl_rankings()` remains available when you only need one zone leaderboard
+  metric. These functions query zone encounter leaderboards;
+  `wcl_report_rankings()` is the separate helper for rankings inside a specific
+  uploaded report.
