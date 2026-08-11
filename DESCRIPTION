@@ -7,13 +7,15 @@ Maintainer: The package maintainer <canalhorchatero@gmail.com>
 Description: Layered helpers for retrieving and normalizing public
     Warcraft Logs API data in R. The package provides a cached API client,
     typed wrappers for reports, fights, actors, player details, events,
-    and rankings, joined workflow helpers for zone crawls and roster/event
-    enrichment, plus compatibility helpers for older query-string based
-    workflows.
+    report rankings, and zone leaderboards, joined workflow helpers for zone
+    crawls, roster/event enrichment, and buff/debuff uptime analysis, plus
+    compatibility helpers for older query-string based workflows.
 License: MIT + file LICENSE
 Encoding: UTF-8
-RoxygenNote: 7.2.3
+RoxygenNote: 7.3.1
 Roxygen: list(markdown = TRUE)
+Depends:
+    R (>= 4.1.0)
 Suggests: 
     knitr,
     rmarkdown,

@@ -1,0 +1,45 @@
+{
+  "data": {
+    "reportData": {
+      "report": {
+        "code": "RANKPART",
+        "title": "Partially Processed Rankings",
+        "startTime": 1700000000000,
+        "endTime": 1700003600000,
+        "segments": 3,
+        "exportedSegments": 2,
+        "fights": [
+          {
+            "id": 7,
+            "name": "Sindragosa",
+            "encounterID": 855,
+            "difficulty": 4,
+            "size": 25,
+            "kill": true,
+            "startTime": 1000,
+            "endTime": 241000
+          }
+        ],
+        "rankings": {
+          "data": [
+            {
+              "fightID": 7,
+              "roles": {
+                "dps": {
+                  "characters": [
+                    {
+                      "id": 105,
+                      "name": "Pending",
+                      "amount": 10000,
+                      "rankPercent": 91.2
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

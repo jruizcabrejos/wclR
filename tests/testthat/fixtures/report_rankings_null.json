@@ -1,0 +1,16 @@
+{
+  "data": {
+    "reportData": {
+      "report": {
+        "code": "RANKNULL",
+        "title": "No Rankings Yet",
+        "startTime": 1700000000000,
+        "endTime": 1700003600000,
+        "segments": 2,
+        "exportedSegments": 2,
+        "fights": [],
+        "rankings": null
+      }
+    }
+  }
+}

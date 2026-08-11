@@ -1,0 +1,163 @@
+{
+  "data": {
+    "reportData": {
+      "report": {
+        "code": "RANK123",
+        "title": "Ranking Night",
+        "startTime": 1700000000000,
+        "endTime": 1700003600000,
+        "segments": 2,
+        "exportedSegments": 2,
+        "fights": [
+          {
+            "id": 7,
+            "name": "Sindragosa",
+            "encounterID": 855,
+            "difficulty": 4,
+            "size": 25,
+            "kill": true,
+            "startTime": 1000,
+            "endTime": 241000
+          },
+          {
+            "id": 8,
+            "name": "The Lich King",
+            "encounterID": 856,
+            "difficulty": 4,
+            "size": 25,
+            "kill": false,
+            "startTime": 300000,
+            "endTime": 600000
+          }
+        ],
+        "rankings": {
+          "schemaVersion": 2,
+          "futureMetadata": {
+            "source": "fixture",
+            "flags": ["alpha", "beta"]
+          },
+          "field_collision": "top-level-flat",
+          "field": {
+            "collision": "top-level-nested"
+          },
+          "data": [
+            {
+              "fightID": 7,
+              "partition": 5,
+              "percentileBands": [95, 99],
+              "field_collision": "fight-flat",
+              "field": {
+                "collision": "fight-nested"
+              },
+              "roles": {
+                "tanks": {
+                  "bracket": "264-266",
+                  "thresholds": [75, 90],
+                  "field_collision": "role-flat",
+                  "field": {
+                    "collision": "role-nested"
+                  },
+                  "characters": [
+                    {
+                      "id": 101,
+                      "name": "Bulwark",
+                      "amount": 4321.5,
+                      "rankPercent": 97.4,
+                      "spec": "Protection",
+                      "futureScalar": "preserved",
+                      "futureMixed": ["one", "two"],
+                      "futureTyped": "text",
+                      "futureBooleanNumber": true,
+                      "role_thresholds": "character-one",
+                      "futureNested": {
+                        "label": "alpha",
+                        "values": [1, 2]
+                      }
+                    }
+                  ]
+                },
+                "dps": {
+                  "bracket": "267-269",
+                  "characters": [
+                    {
+                      "id": 102,
+                      "name": "Ember",
+                      "amount": 12345.6,
+                      "rankPercent": 99.1,
+                      "spec": "Fire",
+                      "futureScalar": "also-preserved",
+                      "futureMixed": "scalar",
+                      "futureTyped": 42,
+                      "futureBooleanNumber": 1,
+                      "role_thresholds": "character-two",
+                      "futureNested": {
+                        "label": "beta",
+                        "values": [3, 4, 5]
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "fightID": 8,
+              "partition": 6,
+              "percentileBands": [90, 95],
+              "field": {
+                "collision": "fight-two-nested"
+              },
+              "field_collision": "fight-two-flat",
+              "roles": {
+                "healers": {
+                  "bracket": "264-266",
+                  "field": {
+                    "collision": "role-two-nested"
+                  },
+                  "field_collision": "role-two-flat",
+                  "characters": [
+                    {
+                      "id": 103,
+                      "name": "Mender",
+                      "amount": 8765.4,
+                      "rankPercent": 96.2,
+                      "spec": "Holy",
+                      "futureScalar": "healer-extra",
+                      "futureMixed": 3,
+                      "futureTyped": true,
+                      "futureBooleanNumber": false,
+                      "role_thresholds": "character-three",
+                      "futureNested": {
+                        "label": "gamma",
+                        "values": [6]
+                      }
+                    }
+                  ]
+                },
+                "damage": {
+                  "bracket": "270-272",
+                  "characters": [
+                    {
+                      "guid": 104,
+                      "name": "Shadow",
+                      "amount": 11223.3,
+                      "rankPercent": 94.8,
+                      "spec": "Shadow",
+                      "futureScalar": "damage-extra",
+                      "futureTyped": null,
+                      "futureBooleanNumber": 0,
+                      "role_thresholds": "character-four",
+                      "futureNested": {
+                        "label": "delta",
+                        "values": [7, 8]
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

@@ -39,6 +39,7 @@ casts <- wcl_events(
   fight_id = fight_id,
   data_type = "Casts",
   source_id = my_actor$actorID[[1]],
+  include_resources = FALSE,
   client = client
 )
 
@@ -46,18 +47,59 @@ buffs <- wcl_events(
   report_code,
   fight_id = fight_id,
   data_type = "Buffs",
-  source_id = my_actor$actorID[[1]],
+  target_id = my_actor$actorID[[1]],
+  include_resources = FALSE,
   client = client
+)
+
+pull_auras <- wcl_events(
+  report_code,
+  fight_id = fight_id,
+  data_type = "CombatantInfo",
+  hostility_type = "Friendlies",
+  include_resources = FALSE,
+  client = client
+)
+
+my_buff_uptime <- wcl_aura_uptime(
+  buffs,
+  combatant_info = pull_auras,
+  target_ids = my_actor$actorID[[1]]
+)
+
+my_buff_intervals <- wcl_aura_uptime(
+  buffs,
+  combatant_info = pull_auras,
+  target_ids = my_actor$actorID[[1]],
+  output = "intervals"
 )
 
 casts <- wcl_join_actors(casts, actors)
 casts <- wcl_add_relative_time(casts)
 ```
 
+`wcl_aura_uptime()` uses the full fight as its denominator. Pull-time
+CombatantInfo establishes buffs that were already present when combat began;
+a snapshot with no later removal counts as 100% uptime. Fetch CombatantInfo
+without an ability filter because its aura abilities are nested inside the
+snapshot payload. Keep pagination enabled and avoid narrowing the event time
+range: uptime needs every apply, refresh, stack, and remove event in the fight.
+The Buffs request uses `target_id`, so it includes auras from every caster that
+affected the selected player.
+
 ## Notes
 
 - v1 keeps personal workflows report-first on purpose.
 - `wcl_filter_abilities()`, `wcl_filter_types()`, and `wcl_filter_and()` are
-  the package-native way to build common filter expressions.
+  narrow builders for common filter-expression fragments. The full syntax is
+  documented in the [WCL expression guide](https://www.warcraftlogs.com/help/pins).
+- `filter_expression` is WCL's SQL-like site language, not GraphQL, and filters
+  event rows rather than response columns. Parenthesize multi-type `or`
+  fragments before combining them with `wcl_filter_and()`.
+- `include_resources`, `use_ability_ids`, and `use_actor_ids` control coarse
+  event payload details. Arbitrary nested event JSON columns cannot be excluded
+  server-side by column name.
 - Character and guild discovery across reports can still be reached through
   `wcl_query_custom()` plus `wcl_request()` when needed.
+- Use the [official Warcraft Logs v2 Warcraft schema](https://www.warcraftlogs.com/v2-api-docs/warcraft/)
+  when building those custom queries.

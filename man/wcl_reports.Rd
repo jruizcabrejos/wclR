@@ -5,14 +5,16 @@
 \usage{
 wcl_report_code(x)
 
-wcl_reports(zone_id, pages = NULL, client = NULL)
+wcl_reports(zone_id, pages = 1:3, client = NULL)
 }
 \arguments{
 \item{x}{A bare report code or a full Warcraft Logs report URL.}
 
 \item{zone_id}{Warcraft Logs zone ID.}
 
-\item{pages}{Optional page number or vector of page numbers.}
+\item{pages}{Page number or vector of exact page numbers. Defaults to pages
+1 through 3. Values above 25 are capped with a warning. Use \code{NULL} to
+discover pages automatically through page 25.}
 
 \item{client}{An optional \code{wcl_client} object.}
 }
@@ -22,5 +24,6 @@ wcl_reports(zone_id, pages = NULL, client = NULL)
 }
 \description{
 Helpers for normalizing Warcraft Logs report identifiers and crawling public
-report listings for a zone.
+report listings for a zone. After every requested page, \code{wcl_reports()}
+emits a suppressible message with the page count and running total.
 }

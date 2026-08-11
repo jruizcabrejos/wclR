@@ -154,13 +154,15 @@
     fight_id,
     data_type,
     kill_type = "Encounters",
-    hostility_type = "All",
+    hostility_type = "Friendlies",
     source_id = NULL,
     target_id = NULL,
     filter_expression = NULL,
     start_time = 0,
     end_time = 999999999999,
-    include_resources = TRUE) {
+    include_resources = TRUE,
+    use_ability_ids = TRUE,
+    use_actor_ids = TRUE) {
   report_code <- wcl_report_code(report_code)
   fight_id <- .wcl_graphql_int(fight_id)
 
@@ -172,6 +174,8 @@
     paste0("startTime: ", .wcl_graphql_num(start_time)),
     paste0("endTime: ", .wcl_graphql_num(end_time)),
     paste0("includeResources: ", .wcl_graphql_bool(include_resources)),
+    paste0("useAbilityIDs: ", .wcl_graphql_bool(use_ability_ids)),
+    paste0("useActorIDs: ", .wcl_graphql_bool(use_actor_ids)),
     if (!is.null(source_id)) paste0("sourceID: ", .wcl_graphql_int(source_id)),
     if (!is.null(target_id)) paste0("targetID: ", .wcl_graphql_int(target_id)),
     if (!is.null(filter_expression)) paste0("filterExpression: ", .wcl_graphql_string(filter_expression))

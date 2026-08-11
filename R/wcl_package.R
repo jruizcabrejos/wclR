@@ -25,9 +25,11 @@ if (getRversion() >= "2.15.1") {
     "report_title",
     "role",
     "sourceID",
+    "sourceInstanceID",
     "startTime",
     "subType",
     "targetID",
+    "targetInstanceID",
     "timestamp"
   ))
 }

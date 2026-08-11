@@ -35,10 +35,28 @@
       api_url = "https://classic.warcraftlogs.com/api/v2/client",
       oauth_url = "https://www.warcraftlogs.com/oauth/token"
     ),
-    warcraft = list(
-      key = "warcraft",
+    retail = list(
+      key = "retail",
       base_url = "https://www.warcraftlogs.com",
       api_url = "https://www.warcraftlogs.com/api/v2/client",
+      oauth_url = "https://www.warcraftlogs.com/oauth/token"
+    ),
+    sod = list(
+      key = "sod",
+      base_url = "https://www.sod.warcraftlogs.com",
+      api_url = "https://www.sod.warcraftlogs.com/api/v2/client",
+      oauth_url = "https://www.warcraftlogs.com/oauth/token"
+    ),
+    fresh = list(
+      key = "fresh",
+      base_url = "https://www.fresh.warcraftlogs.com",
+      api_url = "https://www.fresh.warcraftlogs.com/api/v2/client",
+      oauth_url = "https://www.warcraftlogs.com/oauth/token"
+    ),
+    vanilla = list(
+      key = "vanilla",
+      base_url = "https://www.vanilla.warcraftlogs.com",
+      api_url = "https://www.vanilla.warcraftlogs.com/api/v2/client",
       oauth_url = "https://www.warcraftlogs.com/oauth/token"
     )
   )
@@ -245,7 +263,7 @@
   }
 
   words <- strsplit(tolower(x), "\\s+")[[1L]]
-  paste0(tools::toTitleCase(words), collapse = "")
+  paste0(stringr::str_to_sentence(words), collapse = "")
 }
 
 .wcl_graphql_metric <- function(x) {

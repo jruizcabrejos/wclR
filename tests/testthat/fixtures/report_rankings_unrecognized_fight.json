@@ -1,0 +1,32 @@
+{
+  "data": {
+    "reportData": {
+      "report": {
+        "code": "RANKFIGHTODD",
+        "title": "Unknown Fight Shape",
+        "startTime": 1700000000000,
+        "endTime": 1700003600000,
+        "segments": 1,
+        "exportedSegments": 1,
+        "fights": [],
+        "rankings": {
+          "data": [
+            {
+              "difficulty": 4,
+              "roles": {
+                "dps": {
+                  "characters": [
+                    {
+                      "id": 902,
+                      "name": "No Fight"
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

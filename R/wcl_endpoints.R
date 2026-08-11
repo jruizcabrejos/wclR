@@ -1,3 +1,51 @@
+# Endpoint argument validation --------------------------------------------
+
+.wcl_prepare_report_pages <- function(pages) {
+  if (is.null(pages)) {
+    return(list(pages = 1L, automatic = TRUE))
+  }
+
+  if (!is.numeric(pages) || !length(pages) ||
+      any(!is.finite(pages)) || any(pages <= 0) ||
+      any(pages != floor(pages))) {
+    stop("`pages` must be NULL or a non-empty vector of positive whole numbers.", call. = FALSE)
+  }
+
+  if (any(pages > 25)) {
+    warning(
+      "Warcraft Logs report discovery is limited to page 25; requested pages above 25 were capped.",
+      call. = FALSE,
+      immediate. = TRUE
+    )
+  }
+
+  list(
+    pages = unique(pmin(as.integer(pages), 25L)),
+    automatic = FALSE
+  )
+}
+
+.wcl_validate_event_hostility <- function(hostility_type) {
+  choices <- c("Enemies", "Friendlies")
+  if (!is.character(hostility_type) || length(hostility_type) != 1L ||
+      is.na(hostility_type) || !hostility_type %in% choices) {
+    stop(
+      "`hostility_type` must be exactly one of \"Enemies\" or \"Friendlies\".",
+      call. = FALSE
+    )
+  }
+
+  hostility_type
+}
+
+.wcl_validate_event_flag <- function(x, arg) {
+  if (!is.logical(x) || length(x) != 1L || is.na(x)) {
+    stop("`", arg, "` must be a single non-missing logical value.", call. = FALSE)
+  }
+
+  x
+}
+
 #' Normalize a Warcraft Logs report code
 #'
 #' Accepts either a bare report code or a full Warcraft Logs report URL.
@@ -29,19 +77,25 @@ wcl_report_code <- function(x) {
 #' Retrieve public report listings for a zone
 #'
 #' @param zone_id Warcraft Logs zone ID.
-#' @param pages Optional page number or vector of page numbers. If `NULL`, pages
-#'   are fetched until `has_more_pages` is `FALSE`.
+#' @param pages Page number or vector of exact page numbers. Defaults to pages
+#'   1 through 3. Values above 25 are capped with a warning. If `NULL`, pages
+#'   are discovered automatically until `has_more_pages` is `FALSE` or page 25
+#'   is reached.
 #' @param client Optional [wcl_client()] object.
 #'
 #' @return A tibble with one row per report.
 #' @export
-wcl_reports <- function(zone_id, pages = NULL, client = NULL) {
+wcl_reports <- function(zone_id, pages = 1:3, client = NULL) {
+  page_spec <- .wcl_prepare_report_pages(pages)
+  page_sequence <- page_spec$pages
+  automatic <- page_spec$automatic
+
   client <- .wcl_resolve_client(client)
   zone_id <- as.integer(zone_id)
 
-  page_sequence <- if (is.null(pages)) 1L else unique(as.integer(pages))
   out <- list()
   page_index <- 1L
+  report_count <- 0L
 
   repeat {
     current_page <- page_sequence[[page_index]]
@@ -50,14 +104,20 @@ wcl_reports <- function(zone_id, pages = NULL, client = NULL) {
       query = .wcl_query_reports_page(zone_id = zone_id, page = current_page)
     )
 
-    out[[length(out) + 1L]] <- .wcl_normalize_reports(
+    page_rows <- .wcl_normalize_reports(
       payload = payload,
       zone_id = zone_id,
       page = current_page,
       host = client$host
     )
+    out[[length(out) + 1L]] <- page_rows
+    report_count <- report_count + nrow(page_rows)
+    message(
+      "Report page ", current_page, ": ", nrow(page_rows),
+      " reports (", report_count, " total)."
+    )
 
-    if (!is.null(pages)) {
+    if (!automatic) {
       page_index <- page_index + 1L
       if (page_index > length(page_sequence)) {
         break
@@ -67,6 +127,15 @@ wcl_reports <- function(zone_id, pages = NULL, client = NULL) {
 
     node <- .wcl_path_get(payload, c("data", "reportData", "reports"), default = list())
     if (!isTRUE(.wcl_path_get(node, "has_more_pages", default = FALSE))) {
+      break
+    }
+
+    if (current_page >= 25L) {
+      warning(
+        "Warcraft Logs report discovery stopped at page 25 while more pages were available.",
+        call. = FALSE,
+        immediate. = TRUE
+      )
       break
     }
 
@@ -149,17 +218,47 @@ wcl_player_details <- function(report_code, fight_id, client = NULL) {
 #' @param report_code Report code or report URL.
 #' @param fight_id Fight ID inside the report.
 #' @param data_type Event data type such as `"DamageTaken"`, `"Buffs"`,
-#'   `"Casts"`, or `"All"`.
+#'   `"Casts"`, or `"All"`. See the Warcraft Logs
+#'   [EventDataType documentation](https://www.warcraftlogs.com/v2-api-docs/warcraft/eventdatatype.doc.html)
+#'   for all supported values.
 #' @param client Optional [wcl_client()] object.
 #' @param kill_type Kill type filter. Defaults to `"Encounters"`.
-#' @param hostility_type Hostility filter. Defaults to `"All"`.
+#' @param hostility_type Hostility filter. Must be exactly `"Enemies"` or
+#'   `"Friendlies"`; defaults to `"Friendlies"`. See the Warcraft Logs
+#'   [HostilityType documentation](https://www.warcraftlogs.com/v2-api-docs/warcraft/hostilitytype.doc.html).
 #' @param source_id Optional source actor ID.
 #' @param target_id Optional target actor ID.
-#' @param filter_expression Optional Warcraft Logs filter expression.
+#' @param filter_expression Optional scalar expression in the Warcraft Logs
+#'   site query language, applied server-side to select matching events. It can
+#'   be written directly or constructed with [wcl_filter_abilities()],
+#'   [wcl_filter_types()], and [wcl_filter_and()]. Raw expression `type` values
+#'   such as `"damage"` are distinct from GraphQL `data_type` values such as
+#'   `"DamageTaken"`. See the Warcraft Logs
+#'   [expression-language and Pins guide](https://www.warcraftlogs.com/help/pins).
 #' @param start_time Event query start time in report milliseconds.
 #' @param end_time Event query end time in report milliseconds.
 #' @param paginate Whether to keep requesting pages until
 #'   `nextPageTimestamp` is exhausted.
+#' @param include_resources Whether to include detailed unit resources such as
+#'   `classResources`. Defaults to `TRUE` for backward compatibility.
+#' @param use_ability_ids Whether to include detailed ability information from
+#'   report master data. Setting this to `FALSE` reduces payload size and can
+#'   change which ability detail or ID columns are present. Defaults to `TRUE`
+#'   for backward compatibility.
+#' @param use_actor_ids Whether to include detailed actor information from
+#'   report master data. Setting this to `FALSE` reduces payload size and can
+#'   change which actor detail or ID columns are present. Defaults to `TRUE`
+#'   for backward compatibility.
+#'
+#' @details
+#' [`ReportEventPaginator.data`](https://www.warcraftlogs.com/v2-api-docs/warcraft/reporteventpaginator.doc.html)
+#' is an opaque [JSON scalar](https://www.warcraftlogs.com/v2-api-docs/warcraft/json.doc.html),
+#' so arbitrary event columns cannot be excluded by GraphQL. A
+#' `filter_expression` reduces which events match; it does not select fields or
+#' remove columns. The three logical controls above are the API-supported
+#' bandwidth controls. See the Warcraft Logs
+#' [Report events documentation](https://www.warcraftlogs.com/v2-api-docs/warcraft/report.doc.html)
+#' for the complete set of request arguments.
 #'
 #' @return A tibble with one row per event.
 #' @export
@@ -169,13 +268,21 @@ wcl_events <- function(
     data_type,
     client = NULL,
     kill_type = "Encounters",
-    hostility_type = "All",
+    hostility_type = "Friendlies",
     source_id = NULL,
     target_id = NULL,
     filter_expression = NULL,
     start_time = 0,
     end_time = 999999999999,
-    paginate = TRUE) {
+    paginate = TRUE,
+    include_resources = TRUE,
+    use_ability_ids = TRUE,
+    use_actor_ids = TRUE) {
+  hostility_type <- .wcl_validate_event_hostility(hostility_type)
+  include_resources <- .wcl_validate_event_flag(include_resources, "include_resources")
+  use_ability_ids <- .wcl_validate_event_flag(use_ability_ids, "use_ability_ids")
+  use_actor_ids <- .wcl_validate_event_flag(use_actor_ids, "use_actor_ids")
+
   client <- .wcl_resolve_client(client)
   report_code <- wcl_report_code(report_code)
   fight_id <- as.integer(fight_id)
@@ -196,7 +303,10 @@ wcl_events <- function(
         target_id = target_id,
         filter_expression = filter_expression,
         start_time = next_start,
-        end_time = end_time
+        end_time = end_time,
+        include_resources = include_resources,
+        use_ability_ids = use_ability_ids,
+        use_actor_ids = use_actor_ids
       )
     )
 
@@ -226,8 +336,11 @@ wcl_events <- function(
 #' Retrieve encounter rankings for a zone
 #'
 #' @param zone_id Warcraft Logs zone ID.
-#' @param metric Ranking metric. Examples include `"speed"`, `"progress"`,
-#'   `"execution"`, or `"dps"`.
+#' @param metric Ranking metric. Without `class_name`, use a
+#'   [fight-ranking metric](https://www.warcraftlogs.com/v2-api-docs/warcraft/fightrankingmetrictype.doc.html)
+#'   such as `"speed"`, `"progress"`, or `"execution"`. With `class_name`, use
+#'   a [character-ranking metric](https://www.warcraftlogs.com/v2-api-docs/warcraft/characterrankingmetrictype.doc.html)
+#'   such as `"dps"` or `"hps"`.
 #' @param page Ranking page number or vector of pages.
 #' @param encounter_id Optional encounter ID filter.
 #' @param class_name Optional class name. If provided, character rankings are

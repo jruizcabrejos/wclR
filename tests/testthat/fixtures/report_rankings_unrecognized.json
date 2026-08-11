@@ -1,0 +1,23 @@
+{
+  "data": {
+    "reportData": {
+      "report": {
+        "code": "RANKODD",
+        "title": "Unknown Rankings Shape",
+        "startTime": 1700000000000,
+        "endTime": 1700003600000,
+        "segments": 1,
+        "exportedSegments": 1,
+        "fights": [],
+        "rankings": {
+          "entries": [
+            {
+              "fight": 7,
+              "players": [101]
+            }
+          ]
+        }
+      }
+    }
+  }
+}
