@@ -13,6 +13,12 @@
 #' `rankings_complete` value. A warning is emitted when Warcraft Logs has not
 #' yet processed every uploaded segment for rankings.
 #'
+#' In tidy output, numeric or numeric-string `rankPercent` values are returned
+#' as doubles and Warcraft Logs' `"-"` placeholder is returned as `NA_real_`,
+#' including when either value is wrapped in one or more unnamed singleton
+#' arrays. Other `rankPercent` structures are preserved for the generic
+#' list-column fallback. These conversions do not apply when `output = "raw"`.
+#'
 #' Direct scalar player and ranking fields become columns. Arrays and nested or
 #' unstable values are retained as list-columns. Empty rankings return a typed
 #' zero-row tibble; an unrecognized non-empty shape raises an error that directs
@@ -515,6 +521,50 @@ wcl_report_rankings <- function(
   out
 }
 
+.wcl_normalize_report_rank_percent <- function(value) {
+  original <- value
+  candidate <- value
+
+  repeat {
+    candidate_names <- names(candidate)
+    singleton_is_unnamed <- is.null(candidate_names) ||
+      (length(candidate_names) == 1L &&
+        (is.na(candidate_names[[1L]]) || !nzchar(candidate_names[[1L]])))
+
+    if (!is.list(candidate) || inherits(candidate, "data.frame") ||
+        length(candidate) != 1L || !singleton_is_unnamed) {
+      break
+    }
+
+    candidate <- candidate[[1L]]
+  }
+
+  if (is.null(candidate) ||
+      (is.atomic(candidate) && length(candidate) == 1L &&
+        is.na(candidate))) {
+    return(NA_real_)
+  }
+
+  if ((is.integer(candidate) || is.double(candidate)) &&
+      length(candidate) == 1L) {
+    return(as.double(candidate))
+  }
+
+  if (is.character(candidate) && length(candidate) == 1L) {
+    text <- trimws(candidate)
+    if (identical(text, "-")) {
+      return(NA_real_)
+    }
+
+    number <- suppressWarnings(as.double(text))
+    if (!is.na(number)) {
+      return(number)
+    }
+  }
+
+  original
+}
+
 .wcl_report_rankings_rename_collisions <- function(
     x,
     reserved,
@@ -824,6 +874,12 @@ wcl_report_rankings <- function(
         }
 
         character_flat <- .wcl_flatten_report_rankings_record(character)
+        if ("rankPercent" %in% names(character_flat)) {
+          character_flat[["rankPercent"]] <-
+            .wcl_normalize_report_rank_percent(
+              character_flat[["rankPercent"]]
+            )
+        }
         actor_id <- actor_identity$value
         character_name <- if (has_name) {
           as.character(name_value)

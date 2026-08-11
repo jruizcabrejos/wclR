@@ -228,7 +228,13 @@ wcl_player_details <- function(report_code, fight_id, client = NULL) {
 #'   [HostilityType documentation](https://www.warcraftlogs.com/v2-api-docs/warcraft/hostilitytype.doc.html).
 #' @param source_id Optional source actor ID.
 #' @param target_id Optional target actor ID.
-#' @param filter_expression Optional Warcraft Logs filter expression.
+#' @param filter_expression Optional scalar expression in the Warcraft Logs
+#'   site query language, applied server-side to select matching events. It can
+#'   be written directly or constructed with [wcl_filter_abilities()],
+#'   [wcl_filter_types()], and [wcl_filter_and()]. Raw expression `type` values
+#'   such as `"damage"` are distinct from GraphQL `data_type` values such as
+#'   `"DamageTaken"`. See the Warcraft Logs
+#'   [expression-language and Pins guide](https://www.warcraftlogs.com/help/pins).
 #' @param start_time Event query start time in report milliseconds.
 #' @param end_time Event query end time in report milliseconds.
 #' @param paginate Whether to keep requesting pages until
@@ -244,10 +250,13 @@ wcl_player_details <- function(report_code, fight_id, client = NULL) {
 #'   change which actor detail or ID columns are present. Defaults to `TRUE`
 #'   for backward compatibility.
 #'
+#' @details
 #' [`ReportEventPaginator.data`](https://www.warcraftlogs.com/v2-api-docs/warcraft/reporteventpaginator.doc.html)
 #' is an opaque [JSON scalar](https://www.warcraftlogs.com/v2-api-docs/warcraft/json.doc.html),
-#' so arbitrary event columns cannot be excluded by GraphQL. The three logical
-#' controls above are the API-supported bandwidth controls. See the Warcraft Logs
+#' so arbitrary event columns cannot be excluded by GraphQL. A
+#' `filter_expression` reduces which events match; it does not select fields or
+#' remove columns. The three logical controls above are the API-supported
+#' bandwidth controls. See the Warcraft Logs
 #' [Report events documentation](https://www.warcraftlogs.com/v2-api-docs/warcraft/report.doc.html)
 #' for the complete set of request arguments.
 #'

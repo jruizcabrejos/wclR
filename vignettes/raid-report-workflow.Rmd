@@ -60,12 +60,102 @@ damage_taken <- wcl_events(
 )
 ```
 
+`filter_expression` uses Warcraft Logs' SQL-like expression language, not
+GraphQL. The coarse GraphQL `data_type = "DamageTaken"` and the raw expression
+field `type = 'damage'` are related but distinct. Expressions filter event rows
+on the server; they do not remove fields from the JSON response.
+
+The package helpers build only common ability, event-type, and `and` clauses.
+They do not validate the full API grammar, and `wcl_filter_and()` does not add
+parentheses around `or` fragments. Group multi-type fragments explicitly:
+
+```{r filter-expression, eval = FALSE}
+type_filter <- paste0(
+  "(",
+  wcl_filter_types(c("damage", "miss")),
+  ")"
+)
+
+event_filter <- wcl_filter_and(
+  wcl_filter_abilities(70911),
+  type_filter
+)
+
+raw_filter <- "source.type = 'player' and effectiveDamage > 0"
+```
+
+See the [WCL expression guide](https://www.warcraftlogs.com/help/pins) for the
+logical, comparison, arithmetic, `BETWEEN`, `IN`, identifier, and function
+syntax supported by the service.
+
 The three bandwidth controls default to `TRUE`. Set `include_resources`,
 `use_ability_ids`, or `use_actor_ids` to `FALSE` when that detailed payload is
 not needed. Event `data` is a JSON scalar in the API, so arbitrary nested
 columns such as `classResources` cannot be excluded from the server response by
 column name; they can only be dropped from the tibble after download. Disabling
 an ID flag can also change which corresponding detail or ID columns are present.
+
+## Calculate buff or debuff uptime
+
+Fetch the complete aura lifecycle with `paginate = TRUE` and the full fight time
+range. Sliced or partially paginated input can turn boundary events into false
+pull/end inferences. CombatantInfo is a separate event data type, and its aura
+ability IDs are nested, so fetch it independently rather than applying the
+lifecycle request's top-level ability filter:
+
+```{r aura-uptime, eval = FALSE}
+buff_events <- wcl_events(
+  report_code,
+  fight_id = fight_id,
+  data_type = "Buffs",
+  hostility_type = "Friendlies",
+  client = client
+)
+
+pull_auras <- wcl_events(
+  report_code,
+  fight_id = fight_id,
+  data_type = "CombatantInfo",
+  hostility_type = "Friendlies",
+  client = client
+)
+
+buff_summary <- wcl_aura_uptime(
+  buff_events,
+  combatant_info = pull_auras,
+  ability_ids = 2825
+)
+
+buff_intervals <- wcl_aura_uptime(
+  buff_events,
+  combatant_info = pull_auras,
+  ability_ids = 2825,
+  output = "intervals"
+)
+
+buff_by_caster <- wcl_aura_uptime(
+  buff_events,
+  combatant_info = pull_auras,
+  by_source = TRUE
+)
+
+buff_from_source_21 <- wcl_aura_uptime(
+  buff_events,
+  combatant_info = pull_auras,
+  source_ids = 21
+)
+
+buff_summary <- wcl_join_actors(buff_summary, actors)
+```
+
+The default summary unions overlapping sources per target and ability. Set
+`by_source = TRUE` to separate casters. Pull snapshots establish activity at
+fight start; a snapshot with no later removal is 100% uptime. Without a
+snapshot, a leading removal or refresh is treated as evidence that the aura
+was already active, and that inference is flagged. Use `data_type = "Debuffs"`
+for debuffs, or combine both lifecycle tables before calculating uptime. The
+outer CombatantInfo actor is the aura target; each nested aura source is its
+caster.
 
 ## Pull rankings for the report or selected fights
 
@@ -98,6 +188,9 @@ The default `output = "tidy"` produces one row per ranked character and fight;
 helper is distinct from `wcl_rankings()`, which retrieves zone encounter
 leaderboards.
 
+When Warcraft Logs represents an unavailable tidy `rankPercent` as `"-"`, the
+helper returns numeric `NA`. Raw output preserves the original sentinel.
+
 Tidy output includes `segments`, `exportedSegments`, and `rankings_complete`.
 The helper warns if Warcraft Logs has not yet processed every uploaded segment
 for rankings. See the [rankings and parses guide](https://www.warcraftlogs.com/help/ranks/)
@@ -120,3 +213,5 @@ damage_taken <- wcl_add_relative_time(damage_taken)
 - `wcl_report_code()` accepts either a bare code or a full report URL.
 - The [official Warcraft Logs v2 Warcraft schema](https://www.warcraftlogs.com/v2-api-docs/warcraft/)
   documents the fields, arguments, and enums available for custom queries.
+- The [WCL expression guide](https://www.warcraftlogs.com/help/pins) documents
+  the separate site query language used by `filter_expression`.

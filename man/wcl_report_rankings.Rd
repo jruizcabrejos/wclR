@@ -61,6 +61,12 @@ Tidy rows include the report's \code{segments}, \code{exportedSegments}, and a d
 \code{rankings_complete} value. A warning is emitted when Warcraft Logs has not
 yet processed every uploaded segment for rankings.
 
+In tidy output, numeric or numeric-string \code{rankPercent} values are returned
+as doubles and Warcraft Logs' \code{"-"} placeholder is returned as \code{NA_real_},
+including when either value is wrapped in one or more unnamed singleton
+arrays. Other \code{rankPercent} structures are preserved for the generic
+list-column fallback. These conversions do not apply when \code{output = "raw"}.
+
 Direct scalar player and ranking fields become columns. Arrays and nested or
 unstable values are retained as list-columns. Empty rankings return a typed
 zero-row tibble; an unrecognized non-empty shape raises an error that directs

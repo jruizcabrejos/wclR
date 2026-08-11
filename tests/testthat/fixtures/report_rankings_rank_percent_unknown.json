@@ -1,0 +1,51 @@
+{
+  "data": {
+    "reportData": {
+      "report": {
+        "code": "RANKPERCENTUNKNOWN",
+        "title": "Unknown Rank Percent",
+        "startTime": 1700000000000,
+        "endTime": 1700003600000,
+        "segments": 1,
+        "exportedSegments": 1,
+        "fights": [
+          {
+            "id": 7,
+            "name": "Unknown Sentinel Boss",
+            "encounterID": 901,
+            "difficulty": 4,
+            "size": 10,
+            "kill": true,
+            "startTime": 1000,
+            "endTime": 121000
+          }
+        ],
+        "rankings": {
+          "data": [
+            {
+              "fightID": 7,
+              "roles": {
+                "dps": {
+                  "characters": [
+                    {"id": 1, "name": "Numeric", "rankPercent": 88},
+                    {
+                      "id": 2,
+                      "name": "Named Object",
+                      "rankPercent": {"display": "-"}
+                    },
+                    {
+                      "id": 3,
+                      "name": "Multiple Values",
+                      "rankPercent": ["-", "pending"]
+                    },
+                    {"id": 4, "name": "Boolean", "rankPercent": true}
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

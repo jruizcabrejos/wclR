@@ -164,6 +164,49 @@ test_that("wcl_report_rankings rejects invalid IDs before HTTP", {
   expect_identical(http_calls, 0L)
 })
 
+test_that("rankPercent normalization handles numeric values and dash sentinels", {
+  recognized <- list(
+    list(value = 97L, expected = 97),
+    list(value = 96.5, expected = 96.5),
+    list(value = "95.25", expected = 95.25),
+    list(value = " 94.5 ", expected = 94.5),
+    list(value = "-", expected = NA_real_),
+    list(value = " - ", expected = NA_real_),
+    list(value = list("-"), expected = NA_real_),
+    list(value = list(list(list("-"))), expected = NA_real_),
+    list(value = list(93L), expected = 93),
+    list(value = list(list(92.5)), expected = 92.5),
+    list(value = list(list("91.75")), expected = 91.75),
+    list(value = NULL, expected = NA_real_),
+    list(value = NA_integer_, expected = NA_real_),
+    list(value = list(list(NULL)), expected = NA_real_),
+    list(value = list(list(NA_character_)), expected = NA_real_),
+    list(value = NaN, expected = NA_real_)
+  )
+
+  for (case in recognized) {
+    expect_identical(
+      wclR:::.wcl_normalize_report_rank_percent(case$value),
+      case$expected
+    )
+  }
+
+  unknown <- list(
+    list(display = "-"),
+    list("-", "pending"),
+    list(),
+    character(),
+    TRUE,
+    "not ranked"
+  )
+  for (value in unknown) {
+    expect_identical(
+      wclR:::.wcl_normalize_report_rank_percent(value),
+      value
+    )
+  }
+})
+
 test_that("wcl_report_rankings tidies multi-fight and multi-role rankings", {
   ns <- asNamespace("wclR")
 
@@ -310,6 +353,73 @@ test_that("wcl_report_rankings preserves unknown scalar and nested fields", {
   expect_identical(rankings$rankings_field_collision, rep("top-level-flat", 4L))
   expect_true(is.list(rankings$rankings_field))
   expect_identical(rankings$rankings_field[[1L]]$collision, "top-level-nested")
+})
+
+test_that("wcl_report_rankings normalizes mixed rankPercent encodings", {
+  ns <- asNamespace("wclR")
+
+  local_mocked_bindings(
+    .wcl_http_post = function(url, headers, body_json) {
+      fixture_response("report_rankings_rank_percent.json")
+    },
+    .env = ns,
+    .package = "wclR"
+  )
+
+  rankings <- report_rankings_test_call(
+    "RANKPERCENT",
+    client = mock_client()
+  )
+
+  expect_type(rankings$rankPercent, "double")
+  expect_identical(
+    rankings$rankPercent,
+    c(97, 96.5, 95.25, 94, 93.5, rep(NA_real_, 5L))
+  )
+
+  fixture <- jsonlite::fromJSON(
+    read_fixture("report_rankings_rank_percent.json"),
+    simplifyVector = FALSE,
+    bigint_as_char = TRUE
+  )
+  raw <- report_rankings_test_call(
+    "RANKPERCENT",
+    output = "raw",
+    client = mock_client()
+  )
+
+  expect_identical(raw, fixture$data$reportData$report$rankings)
+  expect_identical(
+    raw$data[[1L]]$roles$dps$characters[[7L]]$rankPercent,
+    list("-")
+  )
+  expect_identical(
+    raw$data[[1L]]$roles$dps$characters[[8L]]$rankPercent,
+    list(list(list("-")))
+  )
+})
+
+test_that("wcl_report_rankings preserves unfamiliar rankPercent structures", {
+  ns <- asNamespace("wclR")
+
+  local_mocked_bindings(
+    .wcl_http_post = function(url, headers, body_json) {
+      fixture_response("report_rankings_rank_percent_unknown.json")
+    },
+    .env = ns,
+    .package = "wclR"
+  )
+
+  rankings <- report_rankings_test_call(
+    "RANKPERCENTUNKNOWN",
+    client = mock_client()
+  )
+
+  expect_true(is.list(rankings$rankPercent))
+  expect_identical(rankings$rankPercent[[1L]], 88)
+  expect_identical(rankings$rankPercent[[2L]], list(display = "-"))
+  expect_identical(rankings$rankPercent[[3L]], list("-", "pending"))
+  expect_identical(rankings$rankPercent[[4L]], TRUE)
 })
 
 test_that("wcl_report_rankings raw output is the exact rankings JSON value", {

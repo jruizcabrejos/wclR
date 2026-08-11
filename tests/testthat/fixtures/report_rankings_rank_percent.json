@@ -1,0 +1,49 @@
+{
+  "data": {
+    "reportData": {
+      "report": {
+        "code": "RANKPERCENT",
+        "title": "Mixed Rank Percent",
+        "startTime": 1700000000000,
+        "endTime": 1700003600000,
+        "segments": 1,
+        "exportedSegments": 1,
+        "fights": [
+          {
+            "id": 7,
+            "name": "Sentinel Boss",
+            "encounterID": 900,
+            "difficulty": 4,
+            "size": 10,
+            "kill": true,
+            "startTime": 1000,
+            "endTime": 121000
+          }
+        ],
+        "rankings": {
+          "data": [
+            {
+              "fightID": 7,
+              "roles": {
+                "dps": {
+                  "characters": [
+                    {"id": 1, "name": "Integer", "rankPercent": 97},
+                    {"id": 2, "name": "Double", "rankPercent": 96.5},
+                    {"id": 3, "name": "Numeric String", "rankPercent": "95.25"},
+                    {"id": 4, "name": "Numeric Array", "rankPercent": [94]},
+                    {"id": 5, "name": "Nested Numeric", "rankPercent": [[93.5]]},
+                    {"id": 6, "name": "Scalar Dash", "rankPercent": "-"},
+                    {"id": 7, "name": "Array Dash", "rankPercent": ["-"]},
+                    {"id": 8, "name": "Nested Dash", "rankPercent": [[["-"]]]},
+                    {"id": 9, "name": "Null Rank", "rankPercent": null},
+                    {"id": 10, "name": "Missing Rank"}
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

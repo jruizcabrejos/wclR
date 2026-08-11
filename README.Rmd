@@ -5,7 +5,8 @@
 - a cached API client
 - typed helpers for reports, fights, actors, player details, events, and both
   report-level and zone-level rankings
-- joined workflow helpers for zone crawls, roster enrichment, and relative event timing
+- joined workflow helpers for zone crawls, roster enrichment, relative event
+  timing, and buff/debuff uptime
 - a raw GraphQL escape hatch for unsupported queries
 
 The [official Warcraft Logs v2 Warcraft schema](https://www.warcraftlogs.com/v2-api-docs/warcraft/)
@@ -65,6 +66,35 @@ events <- wcl_join_players(events, players)
 events <- wcl_add_relative_time(events)
 ```
 
+`filter_expression` is written in Warcraft Logs' SQL-like site query language,
+not in GraphQL. It filters event rows on the server; it does not select JSON
+fields or remove columns from the returned tibble. `data_type = "DamageTaken"`
+is the coarse GraphQL [`EventDataType`](https://www.warcraftlogs.com/v2-api-docs/warcraft/eventdatatype.doc.html),
+while `type = 'damage'` addresses the raw event `type` inside an expression.
+See the [complete expression guide](https://www.warcraftlogs.com/help/pins)
+for logical, comparison, arithmetic, `BETWEEN`, `IN`, identifier, and function
+syntax, and [`Report.events`](https://www.warcraftlogs.com/v2-api-docs/warcraft/report.doc.html)
+for the API argument itself.
+
+The filter helpers cover only common ability, type, and `and` fragments; they
+do not validate the complete WCL grammar. `wcl_filter_and()` also does not add
+parentheses. Group a multi-type `or` fragment explicitly before combining it:
+
+```r
+type_filter <- paste0(
+  "(",
+  wcl_filter_types(c("damage", "miss")),
+  ")"
+)
+
+event_filter <- wcl_filter_and(
+  wcl_filter_abilities(70911),
+  type_filter
+)
+
+raw_filter <- "source.type = 'player' and effectiveDamage > 0"
+```
+
 `wcl_events()` defaults `include_resources`, `use_ability_ids`, and
 `use_actor_ids` to `TRUE`. Set only the detail flags you do not need to
 `FALSE` to reduce the API payload. For example, `include_resources = FALSE`
@@ -80,6 +110,72 @@ save API bandwidth:
 ```r
 events <- dplyr::select(events, -dplyr::any_of("classResources"))
 ```
+
+### Buff and debuff uptime
+
+`wcl_aura_uptime()` calculates presence uptime locally from the full apply,
+refresh, stack, and remove lifecycle. Keep `paginate = TRUE` and use the full
+fight time range: a partial download can make a leading removal look like
+pull-time activity or extend an unmatched application to fight end. Fetch
+CombatantInfo separately when you want pull-time auras to be recognized;
+ability IDs in those snapshots are nested, so do not apply the top-level
+ability filter to that request:
+
+```r
+buff_events <- wcl_events(
+  report_code,
+  fight_id = fights$fightID[[1]],
+  data_type = "Buffs",
+  hostility_type = "Friendlies",
+  client = client
+)
+
+pull_auras <- wcl_events(
+  report_code,
+  fight_id = fights$fightID[[1]],
+  data_type = "CombatantInfo",
+  hostility_type = "Friendlies",
+  client = client
+)
+
+buff_uptime <- wcl_aura_uptime(
+  buff_events,
+  combatant_info = pull_auras,
+  ability_ids = 2825
+)
+
+buff_intervals <- wcl_aura_uptime(
+  buff_events,
+  combatant_info = pull_auras,
+  ability_ids = 2825,
+  output = "intervals"
+)
+
+buff_uptime_from_source <- wcl_aura_uptime(
+  buff_events,
+  combatant_info = pull_auras,
+  source_ids = 21
+)
+
+buff_uptime_by_caster <- wcl_aura_uptime(
+  buff_events,
+  combatant_info = pull_auras,
+  by_source = TRUE
+)
+
+buff_uptime <- wcl_join_actors(buff_uptime, actors)
+```
+
+The default summary is per target and ability; overlapping applications from
+different sources are unioned. `by_source = TRUE` separates casters. A pull
+snapshot with no later removal counts as 100% uptime. When lifecycle events
+start with a removal or refresh but no snapshot is available, the helper
+assumes the aura was active from fight start, marks that inference, and warns.
+Use `data_type = "Debuffs"` for debuffs, or combine Buffs and Debuffs before
+calling the helper. Snapshot-only auras remain in the result with
+`aura_type = "unknown"` when WCL supplies no way to classify them. Keep the
+in-memory `wcl_events()` result when exact sub-second absolute interval times
+matter; CSV timestamp text may have lower precision.
 
 ### Report rankings
 
@@ -123,6 +219,8 @@ for how comparisons and timeframes are interpreted.
 Direct scalar ranking fields become columns, while arrays and nested or
 unstable values remain list-columns. If Warcraft Logs returns a new non-empty
 shape that the tidy parser does not recognize, retry with `output = "raw"`.
+In tidy output, unavailable numeric `rankPercent` values represented by WCL as
+`"-"` are normalized to numeric `NA`; raw output preserves the original value.
 
 ### Population workflow
 

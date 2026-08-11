@@ -255,17 +255,53 @@ test_that("relative time helper supports populated and empty event tables", {
 
 test_that("filter builders produce reusable expression fragments", {
   expect_equal(
-    wclR::wcl_filter_abilities(c(70911, 70911, NA)),
-    "ability.id in (70911)"
+    wclR::wcl_filter_abilities(c(70911, 72293, 70911, NA)),
+    "ability.id in (70911, 72293)"
   )
+  expect_identical(wclR::wcl_filter_abilities(numeric()), "")
 
   expect_equal(
-    wclR::wcl_filter_types(c("cast", "combatantinfo")),
-    "type = 'cast' or type = 'combatantinfo'"
+    wclR::wcl_filter_types(c(" cast ", "", NA, "cast", "damage")),
+    "type = 'cast' or type = 'damage'"
   )
+  expect_identical(wclR::wcl_filter_types(character()), "")
 
   expect_equal(
-    wclR::wcl_filter_and("a", "", NA, "b"),
-    "a and b"
+    wclR::wcl_filter_and(list(" a ", "", NA), c("b", "c")),
+    "a and b and c"
   )
+  expect_identical(wclR::wcl_filter_and(NULL, NA, ""), "")
+
+  type_filter <- paste0(
+    "(",
+    wclR::wcl_filter_types(c("damage", "miss")),
+    ")"
+  )
+  expect_equal(
+    wclR::wcl_filter_and(wclR::wcl_filter_abilities(70911), type_filter),
+    "ability.id in (70911) and (type = 'damage' or type = 'miss')"
+  )
+})
+
+test_that("event queries serialize and omit filter expressions", {
+  expression <- 'source.name = "Foo" and ability.id in (70911)'
+  with_filter <- wclR:::.wcl_query_events(
+    report_code = "ABC123",
+    fight_id = 7,
+    data_type = "All",
+    filter_expression = expression
+  )
+  without_filter <- wclR:::.wcl_query_events(
+    report_code = "ABC123",
+    fight_id = 7,
+    data_type = "All",
+    filter_expression = NULL
+  )
+
+  expect_true(grepl(
+    'filterExpression: "source.name = \\"Foo\\" and ability.id in (70911)"',
+    with_filter,
+    fixed = TRUE
+  ))
+  expect_false(grepl("filterExpression:", without_filter, fixed = TRUE))
 })
