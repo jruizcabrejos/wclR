@@ -6,13 +6,27 @@
 #' @param distinct Whether to apply [wcl_distinct_fights()] to the combined
 #'   fight table. Defaults to `TRUE`.
 #' @param client Optional [wcl_client()] object.
+#' @param on_empty_page Action when a report page is empty. Passed to
+#'   [wcl_reports()]. Defaults to `"stop"`; use `"ask"` for an interactive
+#'   prompt or `"continue"` to retrieve every requested page.
 #'
 #' @return A tibble with one row per fight plus report-page metadata from
 #'   [wcl_reports()].
 #' @export
-wcl_zone_fights <- function(zone_id, pages = 1:3, distinct = TRUE, client = NULL) {
+wcl_zone_fights <- function(
+    zone_id,
+    pages = 1:3,
+    distinct = TRUE,
+    client = NULL,
+    on_empty_page = c("stop", "ask", "continue")) {
+  on_empty_page <- match.arg(on_empty_page)
   client <- .wcl_resolve_client(client)
-  reports <- wcl_reports(zone_id = zone_id, pages = pages, client = client)
+  reports <- wcl_reports(
+    zone_id = zone_id,
+    pages = pages,
+    client = client,
+    on_empty_page = on_empty_page
+  )
 
   if (!nrow(reports)) {
     return(.wcl_empty_zone_fights())

@@ -25,6 +25,62 @@
   )
 }
 
+.wcl_confirm_empty_report_page <- function(page) {
+  if (!interactive()) {
+    warning(
+      paste0(
+        "`on_empty_page = \"ask\"` cannot prompt in a non-interactive session; ",
+        "report retrieval stopped at page ", page, "."
+      ),
+      call. = FALSE,
+      immediate. = TRUE
+    )
+    return(FALSE)
+  }
+
+  choice <- utils::menu(
+    choices = c("Continue", "Stop"),
+    title = paste0(
+      "Report page ", page,
+      " returned no reports. Continue with the remaining pages?"
+    )
+  )
+
+  identical(choice, 1L)
+}
+
+.wcl_report_page_is_terminal <- function(
+    node,
+    report_count,
+    cumulative_from_first_page = FALSE) {
+  current_page <- suppressWarnings(as.integer(
+    .wcl_path_get(node, "current_page", default = NA_integer_)
+  ))
+  last_page <- suppressWarnings(as.integer(
+    .wcl_path_get(node, "last_page", default = NA_integer_)
+  ))
+  has_more_pages <- .wcl_path_get(node, "has_more_pages", default = NULL)
+  total <- suppressWarnings(as.numeric(
+    .wcl_path_get(node, "total", default = NA_real_)
+  ))
+
+  terminal_has_more <- identical(has_more_pages, FALSE)
+
+  terminal_last_page <- length(current_page) == 1L &&
+    !is.na(current_page) &&
+    length(last_page) == 1L &&
+    !is.na(last_page) &&
+    current_page >= last_page
+
+  terminal_total <- isTRUE(cumulative_from_first_page) &&
+    length(total) == 1L &&
+    is.finite(total) &&
+    total >= 0 &&
+    report_count >= total
+
+  terminal_has_more || terminal_last_page || terminal_total
+}
+
 .wcl_validate_event_hostility <- function(hostility_type) {
   choices <- c("Enemies", "Friendlies")
   if (!is.character(hostility_type) || length(hostility_type) != 1L ||
@@ -82,13 +138,27 @@ wcl_report_code <- function(x) {
 #'   are discovered automatically until `has_more_pages` is `FALSE` or page 25
 #'   is reached.
 #' @param client Optional [wcl_client()] object.
+#' @param on_empty_page Action when a requested page contains no reports:
+#'   `"stop"` (the default) returns the reports collected so far, `"ask"`
+#'   prompts before continuing in interactive sessions and otherwise stops
+#'   with a warning, and `"continue"` retrieves the remaining requested pages.
 #'
 #' @return A tibble with one row per report.
 #' @export
-wcl_reports <- function(zone_id, pages = 1:3, client = NULL) {
+wcl_reports <- function(
+    zone_id,
+    pages = 1:3,
+    client = NULL,
+    on_empty_page = c("stop", "ask", "continue")) {
   page_spec <- .wcl_prepare_report_pages(pages)
   page_sequence <- page_spec$pages
   automatic <- page_spec$automatic
+  on_empty_page <- match.arg(on_empty_page)
+  contiguous_ascending <- !automatic &&
+    length(page_sequence) > 1L &&
+    all(diff(page_sequence) == 1L)
+  cumulative_from_first_page <- contiguous_ascending &&
+    identical(page_sequence[[1L]], 1L)
 
   client <- .wcl_resolve_client(client)
   zone_id <- as.integer(zone_id)
@@ -117,7 +187,52 @@ wcl_reports <- function(zone_id, pages = 1:3, client = NULL) {
       " reports (", report_count, " total)."
     )
 
+    node <- .wcl_path_get(payload, c("data", "reportData", "reports"), default = list())
+
+    if (!nrow(page_rows) && !identical(on_empty_page, "continue")) {
+      if (identical(on_empty_page, "stop")) {
+        warning(
+          paste0(
+            "Report page ", current_page,
+            " returned no reports; retrieval stopped and ", report_count,
+            " report", if (report_count == 1L) " was" else "s were",
+            " returned."
+          ),
+          call. = FALSE,
+          immediate. = TRUE
+        )
+        break
+      }
+
+      if (!.wcl_confirm_empty_report_page(current_page)) {
+        if (interactive()) {
+          message(
+            "Report retrieval stopped at page ", current_page,
+            " because it returned no reports."
+          )
+        }
+        break
+      }
+    }
+
     if (!automatic) {
+      has_remaining_pages <- page_index < length(page_sequence)
+      if (has_remaining_pages &&
+          contiguous_ascending &&
+          !identical(on_empty_page, "continue") &&
+          .wcl_report_page_is_terminal(
+            node = node,
+            report_count = report_count,
+            cumulative_from_first_page = cumulative_from_first_page
+          )) {
+        message(
+          "Report retrieval stopped at page ", current_page,
+          " because Warcraft Logs pagination metadata indicates that no more ",
+          "reports are available."
+        )
+        break
+      }
+
       page_index <- page_index + 1L
       if (page_index > length(page_sequence)) {
         break
@@ -125,7 +240,6 @@ wcl_reports <- function(zone_id, pages = 1:3, client = NULL) {
       next
     }
 
-    node <- .wcl_path_get(payload, c("data", "reportData", "reports"), default = list())
     if (!isTRUE(.wcl_path_get(node, "has_more_pages", default = FALSE))) {
       break
     }

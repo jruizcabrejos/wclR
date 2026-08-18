@@ -5,7 +5,12 @@
 \usage{
 wcl_report_code(x)
 
-wcl_reports(zone_id, pages = 1:3, client = NULL)
+wcl_reports(
+  zone_id,
+  pages = 1:3,
+  client = NULL,
+  on_empty_page = c("stop", "ask", "continue")
+)
 }
 \arguments{
 \item{x}{A bare report code or a full Warcraft Logs report URL.}
@@ -17,6 +22,11 @@ wcl_reports(zone_id, pages = 1:3, client = NULL)
 discover pages automatically through page 25.}
 
 \item{client}{An optional \code{wcl_client} object.}
+
+\item{on_empty_page}{Action when a requested report page is empty:
+\code{"stop"} warns and returns the reports collected so far, \code{"ask"}
+prompts in interactive sessions and otherwise stops safely, and
+\code{"continue"} retrieves the remaining explicit pages.}
 }
 \value{
 \code{wcl_report_code()} returns a character vector of report codes.
@@ -25,5 +35,7 @@ discover pages automatically through page 25.}
 \description{
 Helpers for normalizing Warcraft Logs report identifiers and crawling public
 report listings for a zone. After every requested page, \code{wcl_reports()}
-emits a suppressible message with the page count and running total.
+emits a suppressible message with the page count and running total. Contiguous
+ascending crawls also stop at reliable terminal pagination metadata unless
+\code{on_empty_page = "continue"} is used.
 }

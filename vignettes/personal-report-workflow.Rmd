@@ -87,6 +87,80 @@ range: uptime needs every apply, refresh, stack, and remove event in the fight.
 The Buffs request uses `target_id`, so it includes auras from every caster that
 affected the selected player.
 
+## Analyze movement and interrupted casts
+
+Fetch positional casts with resources enabled, and fetch interrupts separately
+so interruptions received by the actor are not lost to a source-only filter:
+
+```{r movement-casts, eval = FALSE}
+position_casts <- wcl_events(
+  report_code,
+  fight_id = fight_id,
+  data_type = "Casts",
+  source_id = my_actor$actorID[[1]],
+  include_resources = TRUE,
+  client = client
+)
+
+interrupt_events <- wcl_events(
+  report_code,
+  fight_id = fight_id,
+  data_type = "Interrupts",
+  client = client
+)
+
+movement <- wcl_actor_movement(
+  position_casts,
+  actor_ids = my_actor$actorID[[1]]
+)
+
+movement_track <- wcl_actor_movement(
+  position_casts,
+  actor_ids = my_actor$actorID[[1]],
+  output = "track"
+)
+
+target_actor_id <- 44L
+impact_events <- wcl_events(
+  report_code,
+  fight_id = fight_id,
+  data_type = "DamageDone",
+  hostility_type = "Enemies",
+  source_id = my_actor$actorID[[1]],
+  target_id = target_actor_id,
+  include_resources = TRUE,
+  client = client
+)
+
+target_track <- wcl_actor_movement(
+  impact_events,
+  actor_ids = target_actor_id,
+  output = "track"
+)
+
+separation <- wcl_actor_distance(movement_track, target_track)
+
+interruptions <- wcl_cast_interruptions(
+  position_casts,
+  interrupt_events = interrupt_events,
+  source_ids = my_actor$actorID[[1]]
+)
+
+travel_time <- wcl_spell_travel_time(
+  position_casts,
+  impact_events,
+  max_travel_ms = 5000,
+  source_ids = my_actor$actorID[[1]],
+  target_ids = target_actor_id
+)
+```
+
+Movement uses sampled 2-D positions and is therefore a lower bound on the
+actual path. Actor distance reports observed-overlap and full-fight coverage.
+`wcl_cast_interruptions()` keeps explicit interrupt events and unfinished
+`begincast` inferences in separate result columns. Travel time uses direct,
+non-periodic landings inside the required maximum window.
+
 ## Notes
 
 - v1 keeps personal workflows report-first on purpose.
