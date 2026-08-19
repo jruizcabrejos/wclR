@@ -3,7 +3,13 @@
 \alias{wcl_rankings_set}
 \title{Batch workflow helpers}
 \usage{
-wcl_zone_fights(zone_id, pages = 1:3, distinct = TRUE, client = NULL)
+wcl_zone_fights(
+  zone_id,
+  pages = 1:3,
+  distinct = TRUE,
+  client = NULL,
+  on_empty_page = c("stop", "ask", "continue")
+)
 
 wcl_rankings_set(
   zone_id,
@@ -25,6 +31,10 @@ through page 25. For \code{wcl_rankings_set()}, ranking page numbers.}
 fight table.}
 
 \item{client}{An optional \code{wcl_client} object.}
+
+\item{on_empty_page}{The empty-report-page policy passed to
+\code{wcl_reports()}. Defaults to \code{"stop"}; use \code{"ask"} for an
+interactive prompt or \code{"continue"} to retrieve every explicit page.}
 
 \item{metrics}{Ranking metrics such as \code{"speed"} or \code{"progress"}.}
 

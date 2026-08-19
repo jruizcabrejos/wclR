@@ -77,10 +77,16 @@ test_that("wcl_zone_fights combines report and fight metadata", {
   )
 
   seen_pages <- "sentinel"
+  seen_on_empty_page <- "sentinel"
 
   local_mocked_bindings(
-    wcl_reports = function(zone_id, pages = NULL, client = NULL) {
+    wcl_reports = function(
+        zone_id,
+        pages = NULL,
+        client = NULL,
+        on_empty_page = "stop") {
       seen_pages <<- pages
+      seen_on_empty_page <<- on_empty_page
       reports_fixture
     },
     wcl_fights = function(report_code, client = NULL) fights_fixture[[as.character(report_code)]],
@@ -92,6 +98,7 @@ test_that("wcl_zone_fights combines report and fight metadata", {
   all_rows <- wclR::wcl_zone_fights(1020, client = mock_client(), distinct = FALSE)
 
   expect_equal(seen_pages, 1:3)
+  expect_identical(seen_on_empty_page, "stop")
   expect_equal(nrow(deduplicated), 2L)
   expect_equal(nrow(all_rows), 3L)
   expect_true(all(c("zone_id", "report_page", "report_visibility", "report_region") %in% names(deduplicated)))
@@ -101,12 +108,24 @@ test_that("wcl_zone_fights returns a typed empty tibble when no reports are retu
   ns <- asNamespace("wclR")
 
   local_mocked_bindings(
-    wcl_reports = function(zone_id, pages = NULL, client = NULL) wclR:::.wcl_empty_reports(),
+    wcl_reports = function(
+        zone_id,
+        pages = NULL,
+        client = NULL,
+        on_empty_page = "stop") {
+      expect_identical(on_empty_page, "continue")
+      wclR:::.wcl_empty_reports()
+    },
     .env = ns,
     .package = "wclR"
   )
 
-  out <- wclR::wcl_zone_fights(1020, pages = 1:2, client = mock_client())
+  out <- wclR::wcl_zone_fights(
+    1020,
+    pages = 1:2,
+    client = mock_client(),
+    on_empty_page = "continue"
+  )
 
   expect_equal(nrow(out), 0L)
   expect_true(all(c("fightID", "zone_id", "report_page") %in% names(out)))

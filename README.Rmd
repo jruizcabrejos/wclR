@@ -6,7 +6,8 @@
 - typed helpers for reports, fights, actors, player details, events, and both
   report-level and zone-level rankings
 - joined workflow helpers for zone crawls, roster enrichment, relative event
-  timing, and buff/debuff uptime
+  timing, buff/debuff uptime, sampled movement, cast interruption, and
+  projectile travel analysis
 - a raw GraphQL escape hatch for unsupported queries
 
 The [official Warcraft Logs v2 Warcraft schema](https://www.warcraftlogs.com/v2-api-docs/warcraft/)
@@ -177,6 +178,122 @@ calling the helper. Snapshot-only auras remain in the result with
 in-memory `wcl_events()` result when exact sub-second absolute interval times
 matter; CSV timestamp text may have lower precision.
 
+### Movement, actor distance, and cast timing
+
+Position data is attached to one resource actor per event. Cast events usually
+carry the source position, while damage and healing events usually carry the
+target position. Keep `include_resources = TRUE`, and let
+`wcl_actor_movement()` resolve ownership from `resourceActor`. See the
+[WCL resource-field documentation](https://www.warcraftlogs.com/help/pins) and
+[positional-data clarification](https://forums.combatlogforums.com/t/warcraftlogs-api-positional-data/15492)
+for the underlying event semantics:
+
+```r
+cast_events <- wcl_events(
+  report_code,
+  fight_id = fights$fightID[[1]],
+  data_type = "Casts",
+  include_resources = TRUE,
+  client = client
+)
+
+damage_taken_events <- wcl_events(
+  report_code,
+  fight_id = fights$fightID[[1]],
+  data_type = "DamageTaken",
+  include_resources = TRUE,
+  client = client
+)
+
+caster_track <- wcl_actor_movement(
+  cast_events,
+  actor_ids = 12,
+  output = "track"
+)
+
+target_track <- wcl_actor_movement(
+  damage_taken_events,
+  actor_ids = 44,
+  output = "track"
+)
+
+caster_movement <- wcl_actor_movement(cast_events, actor_ids = 12)
+separation <- wcl_actor_distance(caster_track, target_track)
+separation_series <- wcl_actor_distance(
+  caster_track,
+  target_track,
+  max_hold_ms = 5000,
+  output = "series"
+)
+```
+
+Raw WCL coordinates are divided by 100 into game-coordinate units (yards).
+Movement is the 2-D distance between observed samples, so
+`total_observed_distance` is a lower bound rather than a reconstruction of the
+actor's exact path. Actor separation uses the last observed positions over the
+tracks' shared time range; the series exposes position ages, while the summary
+reports maximum held-position age plus observed-overlap and full-fight
+coverage.
+
+Analyze cast attempts by combining cast rows with authoritative interrupt
+events. Unfinished `begincast` rows are reported separately as inferred, not
+confirmed, interruptions:
+
+```r
+interrupt_events <- wcl_events(
+  report_code,
+  fight_id = fights$fightID[[1]],
+  data_type = "Interrupts",
+  client = client
+)
+
+cast_attempts <- wcl_cast_interruptions(
+  cast_events,
+  interrupt_events = interrupt_events,
+  source_ids = 12,
+  output = "attempts"
+)
+
+cast_summary <- wcl_cast_interruptions(
+  cast_events,
+  interrupt_events = interrupt_events,
+  source_ids = 12
+)
+```
+
+Projectile travel time is measured from the final `cast` event to one direct
+landing on its target. Supply a maximum plausible delay for the spell; use an
+ability map when casting and landing use different game IDs:
+
+```r
+landing_events <- damage_taken_events
+
+travel_times <- wcl_spell_travel_time(
+  cast_events,
+  landing_events,
+  max_travel_ms = 5000,
+  source_ids = 12,
+  target_ids = 44
+)
+
+ability_map <- tibble::tibble(
+  cast_ability_id = 1001L,
+  landing_ability_id = 1002L
+)
+
+travel_pairs <- wcl_spell_travel_time(
+  cast_events,
+  landing_events,
+  max_travel_ms = 5000,
+  ability_map = ability_map,
+  output = "pairs"
+)
+```
+
+Travel matching is FIFO and intentionally limited to one direct, non-periodic
+landing per cast and target. Ambiguous and unmatched casts remain visible in
+the detailed output.
+
 ### Report rankings
 
 Omit `fight_ids` to retrieve tidy rankings for every applicable fight in a
@@ -227,6 +344,12 @@ In tidy output, unavailable numeric `rankPercent` values represented by WCL as
 ```r
 first_three_pages <- wcl_reports(zone_id = 1020, client = client)
 first_page <- wcl_reports(zone_id = 1020, pages = 1, client = client)
+all_requested_pages <- wcl_reports(
+  zone_id = 1020,
+  pages = 1:8,
+  on_empty_page = "continue",
+  client = client
+)
 
 zone_fights <- wcl_zone_fights(zone_id = 1020, pages = 1:3, client = client)
 zone_rankings <- wcl_rankings_set(
@@ -241,7 +364,10 @@ zone_rankings <- wcl_rankings_set(
 the first page is wanted. Each requested page prints progress in the form
 `Report page <page>: <page count> reports (<running total> total).`
 Requested page numbers above 25 warn before retrieval and are capped to page
-25.
+25. Pagination stops safely and returns the reports collected so far when an
+empty page or terminal page metadata is encountered. Set
+`on_empty_page = "ask"` for an interactive prompt, or `"continue"` to preserve
+exact explicit-page traversal across an empty page.
 
 `wcl_rankings()` and `wcl_rankings_set()` retrieve encounter leaderboards for
 a zone. `wcl_report_rankings()` instead retrieves the rankings contained in one

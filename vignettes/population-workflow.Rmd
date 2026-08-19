@@ -34,6 +34,13 @@ first_page <- wcl_reports(
   client = client
 )
 
+all_requested_pages <- wcl_reports(
+  zone_id = 1020,
+  pages = 1:8,
+  on_empty_page = "continue",
+  client = client
+)
+
 zone_fights <- wcl_zone_fights(
   zone_id = 1020,
   pages = 1:3,
@@ -45,7 +52,10 @@ zone_fights <- wcl_zone_fights(
 only the first page. Each completed page reports its page count and running
 total in the form `Report page <page>: <page count> reports (<running total>
 total).` Requested page numbers above 25 warn before retrieval and are capped
-to page 25.
+to page 25. By default, an empty page or reliable terminal metadata stops the
+crawl and returns all reports collected so far. Use `on_empty_page = "ask"`
+for an interactive decision or `"continue"` to traverse every explicit page.
+`wcl_zone_fights()` accepts and forwards the same policy.
 
 ## Pull zone rankings
 

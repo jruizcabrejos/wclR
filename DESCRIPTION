@@ -8,8 +8,9 @@ Description: Layered helpers for retrieving and normalizing public
     Warcraft Logs API data in R. The package provides a cached API client,
     typed wrappers for reports, fights, actors, player details, events,
     report rankings, and zone leaderboards, joined workflow helpers for zone
-    crawls, roster/event enrichment, and buff/debuff uptime analysis, plus
-    compatibility helpers for older query-string based workflows.
+    crawls, roster/event enrichment, buff/debuff uptime, sampled movement,
+    actor-separation, cast-interruption, and projectile travel-time analysis,
+    plus compatibility helpers for older query-string based workflows.
 License: MIT + file LICENSE
 Encoding: UTF-8
 RoxygenNote: 7.3.1

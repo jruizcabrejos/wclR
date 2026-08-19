@@ -14,9 +14,9 @@ pagination_test_report_record <- function(code, offset = 0) {
 pagination_test_report_response <- function(
     page,
     codes = paste0("REPORT", page),
-    has_more_pages = FALSE,
-    last_page = page,
-    total = length(codes)) {
+    has_more_pages = page < last_page,
+    last_page = 25L,
+    total = 100L * last_page) {
   records <- lapply(
     seq_along(codes),
     function(index) {
@@ -238,6 +238,214 @@ test_that("wcl_reports uses NULL for response-driven auto-pagination", {
   expect_identical(reports$logID, c("AUTO1", "AUTO2"))
 })
 
+test_that("wcl_reports applies the empty-page policy during auto-pagination", {
+  ns <- asNamespace("wclR")
+  requested_pages <- integer()
+
+  local_mocked_bindings(
+    .wcl_http_post = function(url, headers, body_json) {
+      page <- pagination_test_report_page(body_json)
+      requested_pages <<- c(requested_pages, page)
+      codes <- if (identical(page, 1L)) "AUTO1" else character()
+      pagination_test_report_response(
+        page = page,
+        codes = codes,
+        has_more_pages = TRUE,
+        last_page = 3L,
+        total = 1L
+      )
+    },
+    .env = ns,
+    .package = "wclR"
+  )
+
+  reports <- NULL
+  expect_warning(
+    reports <- suppressMessages(
+      wclR::wcl_reports(1020, pages = NULL, client = mock_client())
+    ),
+    "page 2.*no reports"
+  )
+
+  expect_identical(requested_pages, 1:2)
+  expect_identical(reports$logID, "AUTO1")
+})
+
+test_that("wcl_reports stops an ascending crawl when no more pages are reported", {
+  ns <- asNamespace("wclR")
+  requested_pages <- integer()
+
+  local_mocked_bindings(
+    .wcl_http_post = function(url, headers, body_json) {
+      page <- pagination_test_report_page(body_json)
+      requested_pages <<- c(requested_pages, page)
+      pagination_test_report_response(
+        page = page,
+        has_more_pages = page < 2L,
+        last_page = 25L,
+        total = 2500L
+      )
+    },
+    .env = ns,
+    .package = "wclR"
+  )
+
+  reports <- suppressMessages(
+    wclR::wcl_reports(1020, pages = 1:4, client = mock_client())
+  )
+
+  expect_identical(requested_pages, 1:2)
+  expect_identical(reports$page, 1:2)
+})
+
+test_that("wcl_reports stops an ascending crawl at the reported last page", {
+  ns <- asNamespace("wclR")
+  requested_pages <- integer()
+
+  local_mocked_bindings(
+    .wcl_http_post = function(url, headers, body_json) {
+      page <- pagination_test_report_page(body_json)
+      requested_pages <<- c(requested_pages, page)
+      pagination_test_report_response(
+        page = page,
+        has_more_pages = TRUE,
+        last_page = 2L,
+        total = 2500L
+      )
+    },
+    .env = ns,
+    .package = "wclR"
+  )
+
+  reports <- suppressMessages(
+    wclR::wcl_reports(1020, pages = 1:4, client = mock_client())
+  )
+
+  expect_identical(requested_pages, 1:2)
+  expect_identical(reports$page, 1:2)
+})
+
+test_that("wcl_reports stops when a page-one crawl reaches the reported total", {
+  ns <- asNamespace("wclR")
+  requested_pages <- integer()
+  counts <- c(100L, 100L, 100L, 100L, 61L, 0L, 0L, 0L)
+
+  local_mocked_bindings(
+    .wcl_http_post = function(url, headers, body_json) {
+      page <- pagination_test_report_page(body_json)
+      requested_pages <<- c(requested_pages, page)
+      pagination_test_report_response(
+        page = page,
+        codes = paste0("PAGE", page, "_", seq_len(counts[[page]])),
+        has_more_pages = TRUE,
+        last_page = 8L,
+        total = 461L
+      )
+    },
+    .env = ns,
+    .package = "wclR"
+  )
+
+  reports <- suppressMessages(
+    wclR::wcl_reports(1020, pages = 1:8, client = mock_client())
+  )
+
+  expect_identical(requested_pages, 1:5)
+  expect_equal(nrow(reports), 461L)
+  expect_identical(reports$page, rep(1:5, counts[1:5]))
+})
+
+test_that("wcl_reports continue policy bypasses explicit terminal metadata", {
+  ns <- asNamespace("wclR")
+  requested_pages <- integer()
+
+  local_mocked_bindings(
+    .wcl_http_post = function(url, headers, body_json) {
+      page <- pagination_test_report_page(body_json)
+      requested_pages <<- c(requested_pages, page)
+      pagination_test_report_response(
+        page = page,
+        has_more_pages = FALSE,
+        last_page = 2L,
+        total = 2L
+      )
+    },
+    .env = ns,
+    .package = "wclR"
+  )
+
+  reports <- suppressMessages(
+    wclR::wcl_reports(
+      1020,
+      pages = 1:4,
+      client = mock_client(),
+      on_empty_page = "continue"
+    )
+  )
+
+  expect_identical(requested_pages, 1:4)
+  expect_identical(reports$page, 1:4)
+})
+
+test_that("wcl_reports ask policy honors explicit terminal metadata", {
+  ns <- asNamespace("wclR")
+  requested_pages <- integer()
+
+  local_mocked_bindings(
+    .wcl_http_post = function(url, headers, body_json) {
+      page <- pagination_test_report_page(body_json)
+      requested_pages <<- c(requested_pages, page)
+      pagination_test_report_response(
+        page = page,
+        has_more_pages = FALSE,
+        last_page = 4L,
+        total = 4L
+      )
+    },
+    .env = ns,
+    .package = "wclR"
+  )
+
+  reports <- suppressMessages(
+    wclR::wcl_reports(
+      1020,
+      pages = 1:4,
+      client = mock_client(),
+      on_empty_page = "ask"
+    )
+  )
+
+  expect_identical(requested_pages, 1L)
+  expect_identical(reports$page, 1L)
+})
+
+test_that("wcl_reports does not apply terminal metadata to arbitrary page order", {
+  ns <- asNamespace("wclR")
+  requested_pages <- integer()
+
+  local_mocked_bindings(
+    .wcl_http_post = function(url, headers, body_json) {
+      page <- pagination_test_report_page(body_json)
+      requested_pages <<- c(requested_pages, page)
+      pagination_test_report_response(
+        page = page,
+        has_more_pages = FALSE,
+        last_page = page,
+        total = 1L
+      )
+    },
+    .env = ns,
+    .package = "wclR"
+  )
+
+  reports <- suppressMessages(
+    wclR::wcl_reports(1020, pages = c(3, 1, 2), client = mock_client())
+  )
+
+  expect_identical(requested_pages, c(3L, 1L, 2L))
+  expect_identical(reports$page, c(3L, 1L, 2L))
+})
+
 test_that("wcl_reports stops NULL auto-pagination at page 25", {
   ns <- asNamespace("wclR")
   requested_pages <- integer()
@@ -298,7 +506,12 @@ test_that("wcl_reports prints per-page and running report counts", {
   )
 
   progress <- capture.output(
-    reports <- wclR::wcl_reports(1020, pages = 1:3, client = mock_client()),
+    reports <- wclR::wcl_reports(
+      1020,
+      pages = 1:3,
+      client = mock_client(),
+      on_empty_page = "continue"
+    ),
     type = "message"
   )
 
@@ -311,6 +524,179 @@ test_that("wcl_reports prints per-page and running report counts", {
     )
   )
   expect_identical(reports$logID, c("PAGE1A", "PAGE1B", "PAGE3A"))
+})
+
+test_that("wcl_reports stops and returns accumulated rows on an empty page", {
+  ns <- asNamespace("wclR")
+  requested_pages <- integer()
+
+  local_mocked_bindings(
+    .wcl_http_post = function(url, headers, body_json) {
+      page <- pagination_test_report_page(body_json)
+      requested_pages <<- c(requested_pages, page)
+      codes <- if (identical(page, 2L)) character() else paste0("PAGE", page)
+      pagination_test_report_response(page, codes = codes, last_page = 3L)
+    },
+    .env = ns,
+    .package = "wclR"
+  )
+
+  reports <- NULL
+  expect_warning(
+    reports <- suppressMessages(
+      wclR::wcl_reports(1020, pages = 1:3, client = mock_client())
+    ),
+    "page 2.*no reports"
+  )
+
+  expect_identical(requested_pages, 1:2)
+  expect_identical(reports$logID, "PAGE1")
+})
+
+test_that("wcl_reports can continue after an empty page", {
+  ns <- asNamespace("wclR")
+  requested_pages <- integer()
+
+  local_mocked_bindings(
+    .wcl_http_post = function(url, headers, body_json) {
+      page <- pagination_test_report_page(body_json)
+      requested_pages <<- c(requested_pages, page)
+      codes <- if (identical(page, 2L)) character() else paste0("PAGE", page)
+      pagination_test_report_response(page, codes = codes, last_page = 3L)
+    },
+    .env = ns,
+    .package = "wclR"
+  )
+
+  reports <- suppressMessages(
+    wclR::wcl_reports(
+      1020,
+      pages = 1:3,
+      client = mock_client(),
+      on_empty_page = "continue"
+    )
+  )
+
+  expect_identical(requested_pages, 1:3)
+  expect_identical(reports$logID, c("PAGE1", "PAGE3"))
+})
+
+test_that("the empty-page prompt helper stops in non-interactive sessions", {
+  skip_if(interactive())
+
+  decision <- NULL
+  expect_warning(
+    decision <- wclR:::.wcl_confirm_empty_report_page(2L),
+    "non-interactive"
+  )
+  expect_false(decision)
+})
+
+test_that("wcl_reports ask policy follows the prompt helper", {
+  ns <- asNamespace("wclR")
+  requested_pages <- integer()
+  prompted_pages <- integer()
+
+  local_mocked_bindings(
+    .wcl_http_post = function(url, headers, body_json) {
+      page <- pagination_test_report_page(body_json)
+      requested_pages <<- c(requested_pages, page)
+      codes <- if (identical(page, 2L)) character() else paste0("PAGE", page)
+      pagination_test_report_response(page, codes = codes, last_page = 3L)
+    },
+    .wcl_confirm_empty_report_page = function(page) {
+      prompted_pages <<- c(prompted_pages, page)
+      TRUE
+    },
+    .env = ns,
+    .package = "wclR"
+  )
+
+  reports <- suppressMessages(
+    wclR::wcl_reports(
+      1020,
+      pages = 1:3,
+      client = mock_client(),
+      on_empty_page = "ask"
+    )
+  )
+
+  expect_identical(prompted_pages, 2L)
+  expect_identical(requested_pages, 1:3)
+  expect_identical(reports$logID, c("PAGE1", "PAGE3"))
+})
+
+test_that("wcl_reports ask policy authorizes only one page at a time", {
+  ns <- asNamespace("wclR")
+  requested_pages <- integer()
+  prompted_pages <- integer()
+
+  local_mocked_bindings(
+    .wcl_http_post = function(url, headers, body_json) {
+      page <- pagination_test_report_page(body_json)
+      requested_pages <<- c(requested_pages, page)
+      codes <- if (page %in% c(2L, 3L)) character() else paste0("PAGE", page)
+      pagination_test_report_response(page, codes = codes, last_page = 4L)
+    },
+    .wcl_confirm_empty_report_page = function(page) {
+      prompted_pages <<- c(prompted_pages, page)
+      identical(page, 2L)
+    },
+    .env = ns,
+    .package = "wclR"
+  )
+
+  reports <- suppressMessages(
+    wclR::wcl_reports(
+      1020,
+      pages = 1:4,
+      client = mock_client(),
+      on_empty_page = "ask"
+    )
+  )
+
+  expect_identical(requested_pages, 1:3)
+  expect_identical(prompted_pages, 2:3)
+  expect_identical(reports$logID, "PAGE1")
+})
+
+test_that("wcl_reports ask policy stops safely when prompting is unavailable", {
+  ns <- asNamespace("wclR")
+  requested_pages <- integer()
+
+  local_mocked_bindings(
+    .wcl_http_post = function(url, headers, body_json) {
+      page <- pagination_test_report_page(body_json)
+      requested_pages <<- c(requested_pages, page)
+      codes <- if (identical(page, 2L)) character() else paste0("PAGE", page)
+      pagination_test_report_response(page, codes = codes, last_page = 3L)
+    },
+    .wcl_confirm_empty_report_page = function(page) {
+      warning(
+        "Prompting is unavailable in this non-interactive test session.",
+        call. = FALSE
+      )
+      FALSE
+    },
+    .env = ns,
+    .package = "wclR"
+  )
+
+  reports <- NULL
+  expect_warning(
+    reports <- suppressMessages(
+      wclR::wcl_reports(
+        1020,
+        pages = 1:3,
+        client = mock_client(),
+        on_empty_page = "ask"
+      )
+    ),
+    "non-interactive"
+  )
+
+  expect_identical(requested_pages, 1:2)
+  expect_identical(reports$logID, "PAGE1")
 })
 
 test_that("wcl_reports rejects invalid pages before HTTP", {
@@ -346,6 +732,30 @@ test_that("wcl_reports rejects invalid pages before HTTP", {
     )
   }
 
+  expect_identical(http_calls, 0L)
+})
+
+test_that("wcl_reports rejects an invalid empty-page policy before HTTP", {
+  ns <- asNamespace("wclR")
+  http_calls <- 0L
+
+  local_mocked_bindings(
+    .wcl_http_post = function(url, headers, body_json) {
+      http_calls <<- http_calls + 1L
+      pagination_test_report_response(1)
+    },
+    .env = ns,
+    .package = "wclR"
+  )
+
+  expect_error(
+    wclR::wcl_reports(
+      1020,
+      client = mock_client(),
+      on_empty_page = "invalid"
+    ),
+    "stop.*ask.*continue"
+  )
   expect_identical(http_calls, 0L)
 })
 
