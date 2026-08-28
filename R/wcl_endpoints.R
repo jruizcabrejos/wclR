@@ -66,13 +66,10 @@
 
   terminal_has_more <- identical(has_more_pages, FALSE)
 
-  # Report pagination uses negative values when a total or last page is unknown.
   terminal_last_page <- length(current_page) == 1L &&
     !is.na(current_page) &&
-    current_page >= 1L &&
     length(last_page) == 1L &&
     !is.na(last_page) &&
-    last_page >= 1L &&
     current_page >= last_page
 
   terminal_total <- isTRUE(cumulative_from_first_page) &&
