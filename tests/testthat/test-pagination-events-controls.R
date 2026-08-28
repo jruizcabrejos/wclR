@@ -325,6 +325,34 @@ test_that("wcl_reports stops an ascending crawl at the reported last page", {
   expect_identical(reports$page, 1:2)
 })
 
+test_that("wcl_reports ignores negative unknown pagination metadata", {
+  ns <- asNamespace("wclR")
+  requested_pages <- integer()
+
+  local_mocked_bindings(
+    .wcl_http_post = function(url, headers, body_json) {
+      page <- pagination_test_report_page(body_json)
+      requested_pages <<- c(requested_pages, page)
+      pagination_test_report_response(
+        page = page,
+        has_more_pages = TRUE,
+        last_page = -1L,
+        total = -1L
+      )
+    },
+    .env = ns,
+    .package = "wclR"
+  )
+
+  reports <- suppressMessages(
+    wclR::wcl_reports(1060, client = mock_client())
+  )
+
+  expect_identical(requested_pages, 1:3)
+  expect_identical(reports$page, 1:3)
+  expect_identical(reports$logID, paste0("REPORT", 1:3))
+})
+
 test_that("wcl_reports stops when a page-one crawl reaches the reported total", {
   ns <- asNamespace("wclR")
   requested_pages <- integer()
