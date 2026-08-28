@@ -22,6 +22,28 @@ test_that("wcl_reports auto-paginates and normalizes report rows", {
   expect_true(all(c("report_link", "report_start_at", "zone_id") %in% names(reports)))
 })
 
+test_that("wcl_reports normalizes nullable and populated regions together", {
+  ns <- asNamespace("wclR")
+
+  local_mocked_bindings(
+    .wcl_http_post = function(url, headers, body_json) {
+      fixture_response("reports_nullable_regions.json")
+    },
+    .env = ns,
+    .package = "wclR"
+  )
+
+  reports <- suppressMessages(
+    wclR::wcl_reports(1060, pages = 1, client = mock_client())
+  )
+
+  expect_identical(reports$logID, c("NULLREGION", "USREGION"))
+  expect_identical(reports$region, c(NA_character_, "US"))
+  expect_type(reports$region, "character")
+  expect_identical(anyDuplicated(names(reports)), 0L)
+  expect_false("region_name" %in% names(reports))
+})
+
 test_that("fight, actor, player, event, and ranking helpers normalize fixtures", {
   ns <- asNamespace("wclR")
 

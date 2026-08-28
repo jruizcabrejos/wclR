@@ -1,6 +1,17 @@
 .wcl_normalize_reports <- function(payload, zone_id, page, host = "classic") {
   node <- .wcl_path_get(payload, c("data", "reportData", "reports"), default = list())
   records <- .wcl_records(.wcl_path_get(node, "data", default = list()))
+
+  records <- lapply(records, function(record) {
+    region <- .wcl_path_get(record, c("region", "name"), default = NA_character_)
+    if (length(region) != 1L || is.list(region) || is.na(region)) {
+      region <- NA_character_
+    }
+
+    record[["region"]] <- as.character(region)
+    record
+  })
+
   tbl <- .wcl_bind_records(records)
 
   if (!nrow(tbl)) {
@@ -9,10 +20,6 @@
 
   if ("code" %in% names(tbl)) {
     tbl <- dplyr::rename(tbl, logID = code)
-  }
-
-  if ("region_name" %in% names(tbl)) {
-    tbl <- dplyr::rename(tbl, region = region_name)
   }
 
   config <- .wcl_host_config(host)
